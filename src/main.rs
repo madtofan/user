@@ -12,7 +12,7 @@ use tracing_subscriber::util::SubscriberInitExt;
 use tonic::{transport::Server, Request, Response, Status};
 use user::{
     user_server::{User, UserServer},
-    LoginRequest, RegisterRequest, UpdateRequest, UserResponse,
+    GetUserRequest, LoginRequest, RegisterRequest, UpdateRequest, UserResponse,
 };
 
 mod config;
@@ -54,6 +54,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let user_service = Arc::new(UserService::new(user_repository, config));
     let request_handler = RequestHandler::new(user_service);
 
+    info!("Service ready for request!");
     Server::builder()
         .add_service(UserServer::new(request_handler))
         .serve(app_url)
@@ -77,6 +78,7 @@ impl User for RequestHandler {
         &self,
         request: Request<LoginRequest>,
     ) -> Result<Response<UserResponse>, Status> {
+        info!("Login Request!");
         let logged_in_user = self.user_service.login_user(request.into_inner()).await?;
 
         Ok(Response::new(logged_in_user))
@@ -86,6 +88,7 @@ impl User for RequestHandler {
         &self,
         request: Request<RegisterRequest>,
     ) -> Result<Response<UserResponse>, Status> {
+        info!("Register Request!");
         let created_user = self
             .user_service
             .register_user(request.into_inner())
@@ -94,11 +97,23 @@ impl User for RequestHandler {
         Ok(Response::new(created_user))
     }
 
+    async fn get(
+        &self,
+        request: Request<GetUserRequest>,
+    ) -> Result<Response<UserResponse>, Status> {
+        info!("Get User Request!");
+        let user = self.user_service.get_user(request.into_inner()).await?;
+
+        Ok(Response::new(user))
+    }
+
     async fn update(
         &self,
         request: Request<UpdateRequest>,
     ) -> Result<Response<UserResponse>, Status> {
+        info!("Update User Request!");
         let r = request.into_inner();
+
         match r.fields {
             Some(fields) => {
                 let updated_user = self.user_service.updated_user(r.id, fields).await?;

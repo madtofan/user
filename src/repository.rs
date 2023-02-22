@@ -21,14 +21,13 @@ pub struct UserEntity {
 }
 
 impl UserEntity {
-    pub fn into_user_response(self, token: String) -> UserResponse {
+    pub fn into_user_response(self) -> UserResponse {
         UserResponse {
             id: self.id,
             username: self.username,
             email: self.email,
             bio: Some(self.bio),
             image: Some(self.image),
-            token,
         }
     }
 }
@@ -99,7 +98,7 @@ impl UserRepositoryTrait for UserRepository {
         query_as!(
             UserEntity,
             r#"
-                select 
+                select
                     id,
                     created_at,
                     updated_at,
@@ -137,10 +136,10 @@ impl UserRepositoryTrait for UserRepository {
                         password,
                         bio,
                         image
-                    )     
+                    )
                 values (
-                        current_timestamp, 
-                        current_timestamp, 
+                        current_timestamp,
+                        current_timestamp,
                         $1::varchar,
                         $2::varchar,
                         $3::varchar,
@@ -162,7 +161,7 @@ impl UserRepositoryTrait for UserRepository {
         query_as!(
             UserEntity,
             r#"
-                select 
+                select
                     id,
                     created_at,
                     updated_at,
@@ -185,7 +184,7 @@ impl UserRepositoryTrait for UserRepository {
         query_as!(
             UserEntity,
             r#"
-                select 
+                select
                     id,
                     created_at,
                     updated_at,
@@ -208,7 +207,7 @@ impl UserRepositoryTrait for UserRepository {
         query_as!(
             UserEntity,
             r#"
-                select 
+                select
                     id,
                     created_at,
                     updated_at,

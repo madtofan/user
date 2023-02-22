@@ -39,7 +39,7 @@ impl UserService {
             self.config.argon_salt.as_bytes(),
             &Config::default(),
         )
-        .unwrap();
+        .map_err(|err| ServiceError::InternalServerErrorWithContext(err.to_string()))?;
 
         Ok(hashed_password)
     }

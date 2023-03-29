@@ -1,5 +1,5 @@
 use crate::config::AppConfig;
-use crate::repository::DynUserRepositoryTrait;
+use crate::repository::users::DynUserRepositoryTrait;
 use crate::user::{
     update_request::UpdateFields, GetUserRequest, LoginRequest, RegisterRequest, UserResponse,
 };
@@ -16,8 +16,7 @@ pub trait UserServiceTrait {
     async fn register_user(&self, request: RegisterRequest) -> ServiceResult<UserResponse>;
     async fn login_user(&self, request: LoginRequest) -> ServiceResult<UserResponse>;
     async fn get_user(&self, user_id: GetUserRequest) -> ServiceResult<UserResponse>;
-    async fn updated_user(&self, user_id: i64, fields: UpdateFields)
-        -> ServiceResult<UserResponse>;
+    async fn update_user(&self, user_id: i64, fields: UpdateFields) -> ServiceResult<UserResponse>;
 }
 
 pub type DynUserServiceTrait = Arc<dyn UserServiceTrait + Send + Sync>;
@@ -125,11 +124,7 @@ impl UserServiceTrait for UserService {
         Ok(user.into_user_response())
     }
 
-    async fn updated_user(
-        &self,
-        user_id: i64,
-        fields: UpdateFields,
-    ) -> ServiceResult<UserResponse> {
+    async fn update_user(&self, user_id: i64, fields: UpdateFields) -> ServiceResult<UserResponse> {
         info!("retrieving user {:?}", &user_id);
         let user = self.repository.get_user_by_id(user_id.clone()).await?;
 
@@ -143,12 +138,12 @@ impl UserServiceTrait for UserService {
         let updated_user = self
             .repository
             .update_user(
-                user_id.clone(),
-                Some(updated_email.clone()),
-                Some(updated_username),
-                Some(updated_hashed_password),
-                Some(updated_bio),
-                Some(updated_image),
+                user_id,
+                &updated_email,
+                &updated_username,
+                &updated_hashed_password,
+                &updated_bio,
+                &updated_image,
             )
             .await?;
 

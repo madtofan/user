@@ -67,11 +67,11 @@ pub trait UserRepositoryTrait {
     async fn update_user(
         &self,
         id: i64,
-        email: Option<String>,
-        username: Option<String>,
-        password: Option<String>,
-        bio: Option<String>,
-        image: Option<String>,
+        email: &str,
+        username: &str,
+        password: &str,
+        bio: &str,
+        image: &str,
     ) -> anyhow::Result<UserEntity>;
 }
 
@@ -229,11 +229,11 @@ impl UserRepositoryTrait for UserRepository {
     async fn update_user(
         &self,
         id: i64,
-        email: Option<String>,
-        username: Option<String>,
-        password: Option<String>,
-        bio: Option<String>,
-        image: Option<String>,
+        email: &str,
+        username: &str,
+        password: &str,
+        bio: &str,
+        image: &str,
     ) -> anyhow::Result<UserEntity> {
         query_as!(
             UserEntity,

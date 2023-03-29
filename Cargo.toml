@@ -20,7 +20,6 @@ sqlx = { version = "0.6.2", features = [
 tokio = { version = "1.24.2", features = ["macros", "rt-multi-thread"] }
 tonic = "0.8.3"
 tracing = "0.1.37"
-jsonwebtoken = "8.2.0"
 dotenv = "0.15.0"
 clap = { version = "4.1.4", features = ["derive", "env"] }
 tracing-subscriber = { version = "0.3.16", features = ["env-filter"] }

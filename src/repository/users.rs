@@ -73,6 +73,7 @@ pub trait UserRepositoryTrait {
         bio: &str,
         image: &str,
     ) -> anyhow::Result<UserEntity>;
+    async fn update_refresh_token(&self, id: i64, token: &str) -> anyhow::Result<UserEntity>;
 }
 
 pub type DynUserRepositoryTrait = Arc<dyn UserRepositoryTrait + Send + Sync>;
@@ -260,5 +261,29 @@ impl UserRepositoryTrait for UserRepository {
         .fetch_one(&self.pool)
         .await
         .context("could not update the user")
+    }
+
+    async fn update_refresh_token(
+        &self,
+        id: i64,
+        token: &str,
+    ) -> anyhow::Result<UserEntity> {
+        query_as!(
+            UserEntity,
+            r#"
+                    update users
+                    set
+                        token = $1::varchar,
+                        updated_at = current_timestamp
+                    where
+                        id = $2::bigint
+                    returning *
+                "#,
+            token,
+            id
+        )
+        .fetch_one(&self.pool)
+        .await
+        .context("could not update the user token")
     }
 }

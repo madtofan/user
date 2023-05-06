@@ -36,7 +36,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .await
         .expect("could not initialize the database connection pool");
 
-    if *&config.seed {
+    if config.seed {
         todo!("Migrations is not done yet")
         // info!("migrations enabled, running...");
         // sqlx::migrate!()

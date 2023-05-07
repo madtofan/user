@@ -158,4 +158,26 @@ pub mod test {
 
         Ok(())
     }
+
+    #[sqlx::test]
+    async fn update_refresh_token_test(pool: PgPool) -> anyhow::Result<()> {
+        let user_respository = Arc::new(UserRepository::new(pool)) as DynUserRepositoryTrait;
+
+        let created_user = user_respository
+            .create_user("email@email.com", "username", "hashed_password")
+            .await
+            .unwrap();
+
+        assert_eq!(created_user.token, None);
+
+        let test_token = "this is a test token".to_string();
+
+        let updated_user = user_respository
+            .update_refresh_token(created_user.id, &test_token)
+            .await?;
+
+        assert_eq!(&updated_user.token, &Some(test_token));
+
+        Ok(())
+    }
 }

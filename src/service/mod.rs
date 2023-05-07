@@ -11,7 +11,10 @@ pub mod test {
         config::AppConfig,
         repository::users::{DynUserRepositoryTrait, UserRepository},
         service::users::{DynUserServiceTrait, UserService},
-        user::{update_request::UpdateFields, GetUserRequest, LoginRequest, RegisterRequest},
+        user::{
+            update_request::UpdateFields, GetUserRequest, LoginRequest, RefreshTokenRequest,
+            RegisterRequest,
+        },
     };
 
     #[sqlx::test]
@@ -135,6 +138,35 @@ pub mod test {
 
         assert!(update_user.is_ok());
         assert_eq!(&update_user?.bio.unwrap(), &bio);
+
+        Ok(())
+    }
+
+    #[sqlx::test]
+    async fn refresh_token_test(pool: PgPool) -> anyhow::Result<()> {
+        let config = Arc::new(AppConfig::parse());
+        let user_respository = Arc::new(UserRepository::new(pool)) as DynUserRepositoryTrait;
+        let user_service =
+            Arc::new(UserService::new(user_respository.clone(), config)) as DynUserServiceTrait;
+
+        let created_user = user_respository
+            .create_user("email@email.com", "username", "hashed_password")
+            .await
+            .unwrap();
+
+        assert_eq!(created_user.token, None);
+
+        let test_token = "this is a test token".to_string();
+
+        let update_token_request = RefreshTokenRequest {
+            id: created_user.id,
+            token: test_token.clone(),
+        };
+
+        let update_token = user_service.refresh_token(update_token_request).await;
+
+        assert!(update_token.is_ok());
+        assert_eq!(&update_token?.token, &Some(test_token));
 
         Ok(())
     }

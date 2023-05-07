@@ -29,6 +29,7 @@ impl UserEntity {
             email: self.email,
             bio: Some(self.bio),
             image: Some(self.image),
+            token: self.token,
         }
     }
 }

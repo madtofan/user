@@ -4,8 +4,8 @@ use tracing::log::info;
 use crate::{
     service::users::DynUserServiceTrait,
     user::{
-        user_server::User, GetUserRequest, LoginRequest, RegisterRequest, UpdateRequest,
-        UpdateTokenRequest, UserResponse,
+        user_server::User, GetUserRequest, LoginRequest, RefreshTokenRequest, RegisterRequest,
+        UpdateRequest, UserResponse,
     },
 };
 
@@ -76,7 +76,7 @@ impl User for RequestHandler {
 
     async fn refresh_token(
         &self,
-        request: Request<UpdateTokenRequest>,
+        request: Request<RefreshTokenRequest>,
     ) -> Result<Response<UserResponse>, Status> {
         info!("Update Token Request!");
         let user = self

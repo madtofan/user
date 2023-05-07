@@ -18,6 +18,7 @@ pub struct UserEntity {
     pub password: String,
     pub bio: String,
     pub image: String,
+    pub token: Option<String>,
 }
 
 impl UserEntity {
@@ -43,6 +44,7 @@ impl Default for UserEntity {
             password: String::from("default password"),
             bio: String::from("default bio"),
             image: String::from("default image"),
+            token: None,
         }
     }
 }
@@ -107,7 +109,8 @@ impl UserRepositoryTrait for UserRepository {
                     email,
                     password,
                     bio,
-                    image
+                    image,
+                    token
                 from users
                 where email = $1::varchar
                 or username = $2::varchar
@@ -136,7 +139,8 @@ impl UserRepositoryTrait for UserRepository {
                         email,
                         password,
                         bio,
-                        image
+                        image,
+                        token
                     )
                 values (
                         current_timestamp,
@@ -145,7 +149,8 @@ impl UserRepositoryTrait for UserRepository {
                         $2::varchar,
                         $3::varchar,
                         '',
-                        ''
+                        '',
+                        NULL
                     )
                 returning *
             "#,
@@ -170,7 +175,8 @@ impl UserRepositoryTrait for UserRepository {
                     email,
                     password,
                     bio,
-                    image
+                    image,
+                    token
                 from users
                 where email = $1::varchar
             "#,
@@ -193,7 +199,8 @@ impl UserRepositoryTrait for UserRepository {
                     email,
                     password,
                     bio,
-                    image
+                    image,
+                    token
                 from users
                 where username = $1::varchar
             "#,
@@ -216,7 +223,8 @@ impl UserRepositoryTrait for UserRepository {
                     email,
                     password,
                     bio,
-                    image
+                    image,
+                    token
                 from users
                 where id = $1
             "#,
@@ -263,11 +271,7 @@ impl UserRepositoryTrait for UserRepository {
         .context("could not update the user")
     }
 
-    async fn update_refresh_token(
-        &self,
-        id: i64,
-        token: &str,
-    ) -> anyhow::Result<UserEntity> {
+    async fn update_refresh_token(&self, id: i64, token: &str) -> anyhow::Result<UserEntity> {
         query_as!(
             UserEntity,
             r#"

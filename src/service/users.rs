@@ -1,5 +1,6 @@
 use crate::config::AppConfig;
 use crate::repository::users::DynUserRepositoryTrait;
+use crate::user::RefreshTokenRequest;
 use crate::user::{
     update_request::UpdateFields, GetUserRequest, LoginRequest, RegisterRequest, UserResponse,
 };
@@ -17,6 +18,7 @@ pub trait UserServiceTrait {
     async fn login_user(&self, request: LoginRequest) -> ServiceResult<UserResponse>;
     async fn get_user(&self, user_id: GetUserRequest) -> ServiceResult<UserResponse>;
     async fn update_user(&self, user_id: i64, fields: UpdateFields) -> ServiceResult<UserResponse>;
+    async fn refresh_token(&self, request: RefreshTokenRequest) -> ServiceResult<UserResponse>;
 }
 
 pub type DynUserServiceTrait = Arc<dyn UserServiceTrait + Send + Sync>;
@@ -126,7 +128,7 @@ impl UserServiceTrait for UserService {
 
     async fn update_user(&self, user_id: i64, fields: UpdateFields) -> ServiceResult<UserResponse> {
         info!("retrieving user {:?}", &user_id);
-        let user = self.repository.get_user_by_id(user_id.clone()).await?;
+        let user = self.repository.get_user_by_id(user_id).await?;
 
         let updated_email = fields.email.unwrap_or(user.email);
         let updated_username = fields.username.unwrap_or(user.username);
@@ -150,5 +152,17 @@ impl UserServiceTrait for UserService {
         info!("user {:?} updated", &user_id);
 
         Ok(updated_user.into_user_response())
+    }
+
+    async fn refresh_token(&self, request: RefreshTokenRequest) -> ServiceResult<UserResponse> {
+        info!("updating user's token {:?}", request.id);
+        let user = self
+            .repository
+            .update_refresh_token(request.id, &request.token)
+            .await?;
+
+        info!("updated user {:?} token", user.email);
+
+        Ok(user.into_user_response())
     }
 }

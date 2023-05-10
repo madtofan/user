@@ -18,6 +18,4 @@ pub struct AppConfig {
     pub seed: bool,
     #[arg(long, env)]
     pub cors_origin: String,
-    #[arg(long, env)]
-    pub nocapture: bool,
 }

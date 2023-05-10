@@ -8,7 +8,7 @@ use sqlx::{query_as, FromRow};
 use std::sync::Arc;
 use std::time::SystemTime;
 
-#[derive(FromRow, Debug)]
+#[derive(FromRow)]
 pub struct UserEntity {
     pub id: i64,
     pub created_at: OffsetDateTime,

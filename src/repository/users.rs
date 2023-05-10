@@ -19,6 +19,7 @@ pub struct UserEntity {
     pub bio: String,
     pub image: String,
     pub token: Option<String>,
+    pub verified_at: Option<OffsetDateTime>,
 }
 
 impl UserEntity {
@@ -46,6 +47,7 @@ impl Default for UserEntity {
             bio: String::from("default bio"),
             image: String::from("default image"),
             token: None,
+            verified_at: None,
         }
     }
 }
@@ -77,6 +79,7 @@ pub trait UserRepositoryTrait {
         image: &str,
     ) -> anyhow::Result<UserEntity>;
     async fn update_refresh_token(&self, id: i64, token: &str) -> anyhow::Result<UserEntity>;
+    async fn verify_registration(&self, id: i64) -> anyhow::Result<UserEntity>;
 }
 
 pub type DynUserRepositoryTrait = Arc<dyn UserRepositoryTrait + Send + Sync>;
@@ -111,10 +114,12 @@ impl UserRepositoryTrait for UserRepository {
                     password,
                     bio,
                     image,
-                    token
+                    token,
+                    verified_at
                 from users
                 where email = $1::varchar
                 or username = $2::varchar
+                and verified_at is not null
             "#,
             email,
             username
@@ -153,7 +158,17 @@ impl UserRepositoryTrait for UserRepository {
                         '',
                         NULL
                     )
-                returning *
+                returning
+                    id,
+                    created_at,
+                    updated_at,
+                    username,
+                    email,
+                    password,
+                    bio,
+                    image,
+                    token,
+                    verified_at
             "#,
             username,
             email,
@@ -177,9 +192,11 @@ impl UserRepositoryTrait for UserRepository {
                     password,
                     bio,
                     image,
-                    token
+                    token,
+                    verified_at
                 from users
                 where email = $1::varchar
+                and verified_at is not null
             "#,
             email,
         )
@@ -201,9 +218,11 @@ impl UserRepositoryTrait for UserRepository {
                     password,
                     bio,
                     image,
-                    token
+                    token,
+                    verified_at
                 from users
                 where username = $1::varchar
+                and verified_at is not null
             "#,
             username,
         )
@@ -225,7 +244,8 @@ impl UserRepositoryTrait for UserRepository {
                     password,
                     bio,
                     image,
-                    token
+                    token,
+                    verified_at
                 from users
                 where id = $1
             "#,
@@ -258,7 +278,17 @@ impl UserRepositoryTrait for UserRepository {
                         updated_at = current_timestamp
                     where
                         id = $6
-                    returning *
+                    returning
+                        id,
+                        created_at,
+                        updated_at,
+                        username,
+                        email,
+                        password,
+                        bio,
+                        image,
+                        token,
+                        verified_at
                 "#,
             username,
             email,
@@ -282,7 +312,17 @@ impl UserRepositoryTrait for UserRepository {
                         updated_at = current_timestamp
                     where
                         id = $2::bigint
-                    returning *
+                    returning
+                        id,
+                        created_at,
+                        updated_at,
+                        username,
+                        email,
+                        password,
+                        bio,
+                        image,
+                        token,
+                        verified_at
                 "#,
             token,
             id
@@ -290,5 +330,35 @@ impl UserRepositoryTrait for UserRepository {
         .fetch_one(&self.pool)
         .await
         .context("could not update the user token")
+    }
+
+    async fn verify_registration(&self, id: i64) -> anyhow::Result<UserEntity> {
+        query_as!(
+            UserEntity,
+            r#"
+                    update users
+                    set
+                        verified_at = current_timestamp
+                    where
+                        id = $1::bigint
+                    and
+                        verified_at is null
+                    returning
+                        id,
+                        created_at,
+                        updated_at,
+                        username,
+                        email,
+                        password,
+                        bio,
+                        image,
+                        token,
+                        verified_at
+                "#,
+            id
+        )
+        .fetch_one(&self.pool)
+        .await
+        .context("could not verify the user")
     }
 }

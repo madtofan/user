@@ -13,16 +13,29 @@ pub mod test {
         service::users::{DynUserServiceTrait, UserService},
         user::{
             update_request::UpdateFields, GetUserRequest, LoginRequest, RefreshTokenRequest,
-            RegisterRequest,
+            RegisterRequest, VerifyRegistrationRequest,
         },
     };
+    struct AllTraits {
+        user_service: DynUserServiceTrait,
+        user_repository: DynUserRepositoryTrait,
+    }
+
+    fn initialize_handler(pool: PgPool) -> AllTraits {
+        let config = Arc::new(AppConfig::parse());
+        let user_repository = Arc::new(UserRepository::new(pool)) as DynUserRepositoryTrait;
+        let user_service =
+            Arc::new(UserService::new(user_repository.clone(), config)) as DynUserServiceTrait;
+
+        AllTraits {
+            user_service,
+            user_repository,
+        }
+    }
 
     #[sqlx::test]
     async fn register_user_test(pool: PgPool) -> anyhow::Result<()> {
-        let config = Arc::new(AppConfig::parse());
-        let user_respository = Arc::new(UserRepository::new(pool)) as DynUserRepositoryTrait;
-        let user_service =
-            Arc::new(UserService::new(user_respository.clone(), config)) as DynUserServiceTrait;
+        let all_traits = initialize_handler(pool);
 
         let email = "username@email.com".to_string();
         let register_request = RegisterRequest {
@@ -31,11 +44,15 @@ pub mod test {
             password: "user_hashed_password".to_string(),
         };
 
-        let register_user = user_service.register_user(register_request).await;
+        let register_user = all_traits
+            .user_service
+            .register_user(register_request)
+            .await;
 
         assert!(register_user.is_ok());
 
-        let find_user = user_respository
+        let find_user = all_traits
+            .user_repository
             .get_user_by_id(register_user.unwrap().id)
             .await;
 
@@ -47,10 +64,7 @@ pub mod test {
 
     #[sqlx::test]
     async fn login_user_test(pool: PgPool) -> anyhow::Result<()> {
-        let config = Arc::new(AppConfig::parse());
-        let user_respository = Arc::new(UserRepository::new(pool)) as DynUserRepositoryTrait;
-        let user_service = Arc::new(UserService::new(Arc::clone(&user_respository), config))
-            as DynUserServiceTrait;
+        let all_traits = initialize_handler(pool);
 
         let email = "username@email.com".to_string();
         let password = "user_hashed_password".to_string();
@@ -60,14 +74,29 @@ pub mod test {
             email: email.clone(),
             password: password.clone(),
         };
-        user_service.register_user(register_request).await?;
+        let created_user = all_traits
+            .user_service
+            .register_user(register_request)
+            .await?;
 
         let login_request = LoginRequest {
             email: email.clone(),
             password: password.clone(),
         };
 
-        let login_user = user_service.login_user(login_request).await?;
+        let login_user = all_traits
+            .user_service
+            .login_user(login_request.clone())
+            .await;
+
+        assert!(login_user.is_err());
+
+        all_traits
+            .user_repository
+            .verify_registration(created_user.id)
+            .await?;
+
+        let login_user = all_traits.user_service.login_user(login_request).await?;
 
         assert_eq!(&login_user.email, &email);
 
@@ -76,10 +105,7 @@ pub mod test {
 
     #[sqlx::test]
     async fn get_user_test(pool: PgPool) -> anyhow::Result<()> {
-        let config = Arc::new(AppConfig::parse());
-        let user_respository = Arc::new(UserRepository::new(pool)) as DynUserRepositoryTrait;
-        let user_service =
-            Arc::new(UserService::new(user_respository.clone(), config)) as DynUserServiceTrait;
+        let all_traits = initialize_handler(pool);
 
         let email = "username@email.com".to_string();
         let password = "user_hashed_password".to_string();
@@ -90,13 +116,16 @@ pub mod test {
             password: password.clone(),
         };
 
-        let registered_user = user_service.register_user(register_request).await?;
+        let registered_user = all_traits
+            .user_service
+            .register_user(register_request)
+            .await?;
 
         let get_request = GetUserRequest {
             id: registered_user.id,
         };
 
-        let get_user = user_service.get_user(get_request).await;
+        let get_user = all_traits.user_service.get_user(get_request).await;
 
         assert!(get_user.is_ok());
         assert_eq!(&get_user?.email, &email);
@@ -106,10 +135,7 @@ pub mod test {
 
     #[sqlx::test]
     async fn update_user_test(pool: PgPool) -> anyhow::Result<()> {
-        let config = Arc::new(AppConfig::parse());
-        let user_respository = Arc::new(UserRepository::new(pool)) as DynUserRepositoryTrait;
-        let user_service =
-            Arc::new(UserService::new(user_respository.clone(), config)) as DynUserServiceTrait;
+        let all_traits = initialize_handler(pool);
 
         let email = "username@email.com".to_string();
         let password = "user_hashed_password".to_string();
@@ -120,7 +146,10 @@ pub mod test {
             password: password.clone(),
         };
 
-        let registered_user = user_service.register_user(register_request).await?;
+        let registered_user = all_traits
+            .user_service
+            .register_user(register_request)
+            .await?;
 
         let bio = "This is the user bio".to_string();
 
@@ -132,12 +161,50 @@ pub mod test {
             image: None,
         };
 
-        let update_user = user_service
+        let update_user = all_traits
+            .user_service
             .update_user(registered_user.id, update_fields)
             .await;
 
         assert!(update_user.is_ok());
         assert_eq!(&update_user?.bio.unwrap(), &bio);
+
+        Ok(())
+    }
+
+    #[sqlx::test]
+    async fn verify_registration_test(pool: PgPool) -> anyhow::Result<()> {
+        let all_traits = initialize_handler(pool);
+
+        let user_email = "email@email.com";
+        let created_user = all_traits
+            .user_repository
+            .create_user("email@email.com", "username", "hashed_password")
+            .await
+            .unwrap();
+
+        let get_user = all_traits
+            .user_repository
+            .get_user_by_email(user_email)
+            .await?;
+
+        assert!(get_user.is_none());
+
+        let verify_registration_request = VerifyRegistrationRequest {
+            id: created_user.id,
+        };
+
+        all_traits
+            .user_service
+            .verify_registration(verify_registration_request)
+            .await?;
+
+        let get_user = all_traits
+            .user_repository
+            .get_user_by_email(user_email)
+            .await?;
+
+        assert!(get_user.is_some());
 
         Ok(())
     }

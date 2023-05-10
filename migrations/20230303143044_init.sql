@@ -8,11 +8,25 @@ create table if not exists users
     bio        varchar     not null default '',
     image      varchar     not null default '',
     token      varchar,
+    verified_at timestamptz,
     created_at timestamptz not null default current_timestamp,
     updated_at timestamptz not null default current_timestamp
 );
 
 alter table users
     add constraint users_id_pk primary key (id);
+
+create function delete_expired_registration() returns trigger
+    language plpgsql
+    as $$
+begin
+  delete from users where verified_at is null and created_at < now() - interval '5 minute';
+  return new;
+end;
+$$;
+
+create trigger delete_expired_registration_trigger
+    before insert on users
+    execute procedure delete_expired_registration();
 
 create index if not exists users_email_idx on users (email);

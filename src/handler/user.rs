@@ -5,7 +5,7 @@ use crate::{
     service::users::DynUserServiceTrait,
     user::{
         user_server::User, GetUserRequest, LoginRequest, RefreshTokenRequest, RegisterRequest,
-        UpdateRequest, UserResponse,
+        UpdateRequest, UserResponse, VerifyRegistrationRequest,
     },
 };
 
@@ -42,6 +42,19 @@ impl User for RequestHandler {
             .await?;
 
         Ok(Response::new(created_user))
+    }
+
+    async fn verify_registration(
+        &self,
+        request: Request<VerifyRegistrationRequest>,
+    ) -> Result<Response<UserResponse>, Status> {
+        info!("Verify Registration Request!");
+        let verified_user = self
+            .user_service
+            .verify_registration(request.into_inner())
+            .await?;
+
+        Ok(Response::new(verified_user))
     }
 
     async fn get(

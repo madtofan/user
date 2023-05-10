@@ -1,9 +1,9 @@
 use crate::config::AppConfig;
 use crate::repository::users::DynUserRepositoryTrait;
-use crate::user::RefreshTokenRequest;
 use crate::user::{
     update_request::UpdateFields, GetUserRequest, LoginRequest, RegisterRequest, UserResponse,
 };
+use crate::user::{RefreshTokenRequest, VerifyRegistrationRequest};
 use argon2::Config;
 use async_trait::async_trait;
 use common::errors::{ServiceError, ServiceResult};
@@ -19,6 +19,10 @@ pub trait UserServiceTrait {
     async fn get_user(&self, user_id: GetUserRequest) -> ServiceResult<UserResponse>;
     async fn update_user(&self, user_id: i64, fields: UpdateFields) -> ServiceResult<UserResponse>;
     async fn refresh_token(&self, request: RefreshTokenRequest) -> ServiceResult<UserResponse>;
+    async fn verify_registration(
+        &self,
+        request: VerifyRegistrationRequest,
+    ) -> ServiceResult<UserResponse>;
 }
 
 pub type DynUserServiceTrait = Arc<dyn UserServiceTrait + Send + Sync>;
@@ -89,6 +93,16 @@ impl UserServiceTrait for UserService {
         info!("user successfully created");
 
         Ok(created_user.into_user_response())
+    }
+
+    async fn verify_registration(
+        &self,
+        request: VerifyRegistrationRequest,
+    ) -> ServiceResult<UserResponse> {
+        let verified_user = self.repository.verify_registration(request.id).await?;
+
+        info!("verified user registration for user id: {:?}", &request.id);
+        Ok(verified_user.into_user_response())
     }
 
     async fn login_user(&self, request: LoginRequest) -> ServiceResult<UserResponse> {

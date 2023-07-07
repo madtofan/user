@@ -1,12 +1,14 @@
 use crate::config::AppConfig;
 use crate::repository::users::DynUserRepositoryTrait;
-use crate::user::{
-    update_request::UpdateFields, GetUserRequest, LoginRequest, RegisterRequest, UserResponse,
-};
-use crate::user::{RefreshTokenRequest, VerifyRegistrationRequest};
 use argon2::Config;
 use async_trait::async_trait;
-use common::errors::{ServiceError, ServiceResult};
+use madtofan_microservice_common::{
+    errors::{ServiceError, ServiceResult},
+    user::{
+        update_request::UpdateFields, GetUserRequest, LoginRequest, RefreshTokenRequest,
+        RegisterRequest, UserResponse, VerifyRegistrationRequest,
+    },
+};
 use mockall::automock;
 use std::sync::Arc;
 use tracing::{error, info};

@@ -6,11 +6,10 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-common = { path = "../common" }
+madtofan-microservice-common = { path = "../common" }
 anyhow = "1.0.68"
 async-trait = "0.1.63"
 mockall = "0.11.3"
-prost = "0.11.6"
 sqlx = { version = "0.6.2", features = [
   "runtime-tokio-rustls",
   "postgres",
@@ -24,6 +23,3 @@ dotenv = "0.15.0"
 clap = { version = "4.1.4", features = ["derive", "env"] }
 tracing-subscriber = { version = "0.3.16", features = ["env-filter"] }
 rust-argon2 = "1.0.0"
-
-[build-dependencies]
-tonic-build = "0.8.4"

@@ -5,16 +5,16 @@ pub mod test {
     use std::sync::Arc;
 
     use clap::Parser;
+    use madtofan_microservice_common::user::{
+        update_request::UpdateFields, GetUserRequest, LoginRequest, RefreshTokenRequest,
+        RegisterRequest, VerifyRegistrationRequest,
+    };
     use sqlx::PgPool;
 
     use crate::{
         config::AppConfig,
         repository::users::{DynUserRepositoryTrait, UserRepository},
         service::users::{DynUserServiceTrait, UserService},
-        user::{
-            update_request::UpdateFields, GetUserRequest, LoginRequest, RefreshTokenRequest,
-            RegisterRequest, VerifyRegistrationRequest,
-        },
     };
     struct AllTraits {
         user_service: DynUserServiceTrait,

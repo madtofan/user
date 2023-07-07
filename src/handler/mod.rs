@@ -5,6 +5,10 @@ pub mod test {
     use std::sync::Arc;
 
     use clap::Parser;
+    use madtofan_microservice_common::user::{
+        update_request::UpdateFields, user_server::User, GetUserRequest, LoginRequest,
+        RefreshTokenRequest, RegisterRequest, UpdateRequest,
+    };
     use sqlx::PgPool;
     use tonic::Request;
 
@@ -13,10 +17,6 @@ pub mod test {
         handler::user::RequestHandler,
         repository::users::{DynUserRepositoryTrait, UserRepository},
         service::users::{DynUserServiceTrait, UserService},
-        user::{
-            update_request::UpdateFields, user_server::User, GetUserRequest, LoginRequest,
-            RefreshTokenRequest, RegisterRequest, UpdateRequest,
-        },
     };
 
     struct AllTraits {

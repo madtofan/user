@@ -1,13 +1,11 @@
+use madtofan_microservice_common::user::{
+    user_server::User, GetUserRequest, LoginRequest, RefreshTokenRequest, RegisterRequest,
+    UpdateRequest, UserResponse, VerifyRegistrationRequest,
+};
 use tonic::{Request, Response, Status};
 use tracing::log::info;
 
-use crate::{
-    service::users::DynUserServiceTrait,
-    user::{
-        user_server::User, GetUserRequest, LoginRequest, RefreshTokenRequest, RegisterRequest,
-        UpdateRequest, UserResponse, VerifyRegistrationRequest,
-    },
-};
+use crate::service::users::DynUserServiceTrait;
 
 pub struct RequestHandler {
     user_service: DynUserServiceTrait,

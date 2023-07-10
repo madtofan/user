@@ -1,7 +1,8 @@
-use crate::user::UserResponse;
 use anyhow::Context;
 use async_trait::async_trait;
-use common::repository::connection_pool::ServiceConnectionPool;
+use madtofan_microservice_common::{
+    repository::connection_pool::ServiceConnectionPool, user::UserResponse,
+};
 use mockall::automock;
 use sqlx::types::time::OffsetDateTime;
 use sqlx::{query_as, FromRow};

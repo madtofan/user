@@ -16,6 +16,4 @@ pub struct AppConfig {
     pub run_migrations: bool,
     #[arg(long, env)]
     pub seed: bool,
-    #[arg(long, env)]
-    pub cors_origin: String,
 }

@@ -37,11 +37,12 @@ pub mod test {
     async fn register_user_test(pool: PgPool) -> anyhow::Result<()> {
         let all_traits = initialize_handler(pool);
 
-        let email = "username@email.com".to_string();
+        let email = "email@email.com".to_string();
         let register_request = RegisterRequest {
-            username: "username".to_string(),
             email: email.clone(),
             password: "user_hashed_password".to_string(),
+            first_name: "first_name".to_string(),
+            last_name: "last_name".to_string(),
         };
 
         let register_user = all_traits
@@ -66,13 +67,14 @@ pub mod test {
     async fn login_user_test(pool: PgPool) -> anyhow::Result<()> {
         let all_traits = initialize_handler(pool);
 
-        let email = "username@email.com".to_string();
+        let email = "email@email.com".to_string();
         let password = "user_hashed_password".to_string();
 
         let register_request = RegisterRequest {
-            username: "username".to_string(),
             email: email.clone(),
             password: password.clone(),
+            first_name: "first_name".to_string(),
+            last_name: "last_name".to_string(),
         };
         let created_user = all_traits
             .user_service
@@ -107,13 +109,14 @@ pub mod test {
     async fn get_user_test(pool: PgPool) -> anyhow::Result<()> {
         let all_traits = initialize_handler(pool);
 
-        let email = "username@email.com".to_string();
+        let email = "email@email.com".to_string();
         let password = "user_hashed_password".to_string();
 
         let register_request = RegisterRequest {
-            username: "username".to_string(),
             email: email.clone(),
             password: password.clone(),
+            first_name: "first_name".to_string(),
+            last_name: "last_name".to_string(),
         };
 
         let registered_user = all_traits
@@ -137,13 +140,14 @@ pub mod test {
     async fn update_user_test(pool: PgPool) -> anyhow::Result<()> {
         let all_traits = initialize_handler(pool);
 
-        let email = "username@email.com".to_string();
+        let email = "email@email.com".to_string();
         let password = "user_hashed_password".to_string();
 
         let register_request = RegisterRequest {
-            username: "username".to_string(),
             email: email.clone(),
             password: password.clone(),
+            first_name: "first_name".to_string(),
+            last_name: "last_name".to_string(),
         };
 
         let registered_user = all_traits
@@ -154,9 +158,9 @@ pub mod test {
         let bio = "This is the user bio".to_string();
 
         let update_fields = UpdateFields {
-            email: None,
-            username: None,
             password: None,
+            first_name: None,
+            last_name: None,
             bio: Some(bio.clone()),
             image: None,
         };
@@ -179,7 +183,12 @@ pub mod test {
         let user_email = "email@email.com";
         let created_user = all_traits
             .user_repository
-            .create_user("email@email.com", "username", "hashed_password")
+            .create_user(
+                "email@email.com",
+                "hashed_password",
+                "First Name",
+                "Last Name",
+            )
             .await
             .unwrap();
 
@@ -217,7 +226,12 @@ pub mod test {
             Arc::new(UserService::new(user_respository.clone(), config)) as DynUserServiceTrait;
 
         let created_user = user_respository
-            .create_user("email@email.com", "username", "hashed_password")
+            .create_user(
+                "email@email.com",
+                "hashed_password",
+                "First Name",
+                "Last Name",
+            )
             .await
             .unwrap();
 

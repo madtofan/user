@@ -43,13 +43,14 @@ pub mod test {
     async fn register_test(pool: PgPool) -> anyhow::Result<()> {
         let all_traits = initialize_handler(pool);
 
-        let email = "username@email.com".to_string();
+        let email = "email@email.com".to_string();
         let password = "user_hashed_password".to_string();
 
         let register_request = Request::new(RegisterRequest {
-            username: "username".to_string(),
             email: email.clone(),
             password: password.clone(),
+            first_name: "first_name".to_string(),
+            last_name: "last_name".to_string(),
         });
 
         let register_user = all_traits.handler.register(register_request).await;
@@ -71,13 +72,14 @@ pub mod test {
     async fn login_test(pool: PgPool) -> anyhow::Result<()> {
         let all_traits = initialize_handler(pool);
 
-        let email = "username@email.com".to_string();
+        let email = "email@email.com".to_string();
         let password = "user_hashed_password".to_string();
 
         let register_request = RegisterRequest {
-            username: "username".to_string(),
             email: email.clone(),
             password: password.clone(),
+            first_name: "first_name".to_string(),
+            last_name: "last_name".to_string(),
         };
 
         let registered_user = all_traits
@@ -105,13 +107,14 @@ pub mod test {
     async fn get_test(pool: PgPool) -> anyhow::Result<()> {
         let all_traits = initialize_handler(pool);
 
-        let email = "username@email.com".to_string();
+        let email = "email@email.com".to_string();
         let password = "user_hashed_password".to_string();
 
         let register_request = RegisterRequest {
-            username: "username".to_string(),
             email: email.clone(),
             password: password.clone(),
+            first_name: "first_name".to_string(),
+            last_name: "last_name".to_string(),
         };
 
         let registered_user = all_traits
@@ -134,13 +137,14 @@ pub mod test {
     async fn update_test(pool: PgPool) -> anyhow::Result<()> {
         let all_traits = initialize_handler(pool);
 
-        let email = "username@email.com".to_string();
+        let email = "email@email.com".to_string();
         let password = "user_hashed_password".to_string();
 
         let register_request = RegisterRequest {
-            username: "username".to_string(),
             email: email.clone(),
             password: password.clone(),
+            first_name: "first_name".to_string(),
+            last_name: "last_name".to_string(),
         };
 
         let registered_user = all_traits
@@ -153,9 +157,9 @@ pub mod test {
         let update_request = Request::new(UpdateRequest {
             id: registered_user.id,
             fields: Some(UpdateFields {
-                email: None,
-                username: None,
                 password: None,
+                first_name: None,
+                last_name: None,
                 bio: Some(update_bio_value.clone()),
                 image: None,
             }),
@@ -175,7 +179,12 @@ pub mod test {
 
         let created_user = all_traits
             .user_repository
-            .create_user("email@email.com", "username", "hashed_password")
+            .create_user(
+                "email@email.com",
+                "hashed_password",
+                "First Name",
+                "Last Name",
+            )
             .await
             .unwrap();
 
@@ -205,7 +214,12 @@ pub mod test {
 
         let created_user = all_traits
             .user_repository
-            .create_user("email@email.com", "username", "hashed_password")
+            .create_user(
+                "email@email.com",
+                "hashed_password",
+                "First Name",
+                "Last Name",
+            )
             .await
             .unwrap();
 

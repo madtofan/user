@@ -10,11 +10,10 @@ madtofan-microservice-common = { path = "../common" }
 anyhow = "1.0.68"
 async-trait = "0.1.63"
 mockall = "0.11.3"
-sqlx = { version = "0.6.2", features = [
+sqlx = { version = "0.7.1", features = [
   "runtime-tokio-rustls",
   "postgres",
   "time",
-  "offline",
 ] }
 tokio = { version = "1.24.2", features = ["macros", "rt-multi-thread"] }
 tonic = "0.8.3"

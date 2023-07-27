@@ -68,19 +68,15 @@ impl UserService {
 impl UserServiceTrait for UserService {
     async fn register_user(&self, request: RegisterRequest) -> ServiceResult<UserResponse> {
         let email = request.email;
-        let username = request.username;
         let password = request.password;
+        let first_name = request.first_name;
+        let last_name = request.last_name;
 
-        let existing_user = self
-            .repository
-            .search_user_by_email_or_username(&email, &username)
-            .await?;
+        let existing_user = self.repository.get_user_by_email(&email).await?;
 
         if existing_user.is_some() {
-            error!("user {:?}/{:?} already exists", &email, &username);
-            return Err(ServiceError::ObjectConflict(String::from(
-                "username or email is taken",
-            )));
+            error!("user {:?} already exists", &email);
+            return Err(ServiceError::ObjectConflict(String::from("email is taken")));
         }
 
         info!("creating password hash for user {:?}", email);
@@ -89,7 +85,7 @@ impl UserServiceTrait for UserService {
         info!("creating user {:?}", &email);
         let created_user = self
             .repository
-            .create_user(&email, &username, &hashed_password)
+            .create_user(&email, &hashed_password, &first_name, &last_name)
             .await?;
 
         info!("user successfully created");
@@ -146,8 +142,8 @@ impl UserServiceTrait for UserService {
         info!("retrieving user {:?}", &user_id);
         let user = self.repository.get_user_by_id(user_id).await?;
 
-        let updated_email = fields.email.unwrap_or(user.email);
-        let updated_username = fields.username.unwrap_or(user.username);
+        let updated_first_name = fields.first_name.unwrap_or(user.first_name);
+        let updated_last_name = fields.last_name.unwrap_or(user.last_name);
         let updated_bio = fields.bio.unwrap_or(user.bio);
         let updated_image = fields.image.unwrap_or(user.image);
         let updated_hashed_password = fields.password.unwrap_or(user.password);
@@ -157,9 +153,9 @@ impl UserServiceTrait for UserService {
             .repository
             .update_user(
                 user_id,
-                &updated_email,
-                &updated_username,
                 &updated_hashed_password,
+                &updated_first_name,
+                &updated_last_name,
                 &updated_bio,
                 &updated_image,
             )

@@ -1,0 +1,87 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n                    update users\n                    set\n                        password = $1::varchar,\n                        first_name = $2::varchar,\n                        last_name = $3::varchar,\n                        bio = $4::varchar,\n                        image = $5::varchar,\n                        updated_at = current_timestamp\n                    where\n                        id = $6\n                    returning\n                        id,\n                        created_at,\n                        updated_at,\n                        email,\n                        password,\n                        first_name,\n                        last_name,\n                        bio,\n                        image,\n                        token,\n                        verified_at\n                ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 1,
+        "name": "created_at",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 2,
+        "name": "updated_at",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 3,
+        "name": "email",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 4,
+        "name": "password",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 5,
+        "name": "first_name",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 6,
+        "name": "last_name",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 7,
+        "name": "bio",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 8,
+        "name": "image",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 9,
+        "name": "token",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 10,
+        "name": "verified_at",
+        "type_info": "Timestamptz"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Varchar",
+        "Varchar",
+        "Varchar",
+        "Varchar",
+        "Varchar",
+        "Int8"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      true,
+      true
+    ]
+  },
+  "hash": "2e1fd5d7250626a963bd1df7278f842fe4c480923bb7b247b4f5c71847ff6e09"
+}

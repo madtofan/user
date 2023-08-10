@@ -1,0 +1,82 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n                select\n                    id,\n                    created_at,\n                    updated_at,\n                    email,\n                    password,\n                    first_name,\n                    last_name,\n                    bio,\n                    image,\n                    token,\n                    verified_at\n                from users\n                where id = $1\n            ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 1,
+        "name": "created_at",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 2,
+        "name": "updated_at",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 3,
+        "name": "email",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 4,
+        "name": "password",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 5,
+        "name": "first_name",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 6,
+        "name": "last_name",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 7,
+        "name": "bio",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 8,
+        "name": "image",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 9,
+        "name": "token",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 10,
+        "name": "verified_at",
+        "type_info": "Timestamptz"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int8"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      true,
+      true
+    ]
+  },
+  "hash": "744ae5a2128e03f7b2c1185e951fdaf7cb3560af117b6fb7e8e1f9c782f66660"
+}

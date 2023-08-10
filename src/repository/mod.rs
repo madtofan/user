@@ -14,13 +14,18 @@ pub mod test {
 
         // Positive test
         let created_user = user_repository
-            .create_user("email@email.com", "username", "hashed_password")
+            .create_user(
+                "email@email.com",
+                "hashed_password",
+                "First Name",
+                "Last Name",
+            )
             .await
             .unwrap();
 
         let get_user_by_id = user_repository.get_user_by_id(created_user.id).await?;
 
-        assert_eq!(get_user_by_id.username, "username");
+        assert_eq!(get_user_by_id.email, "email@email.com");
 
         // Negative test
         let get_user_by_false_id = user_repository.get_user_by_id(-1).await;
@@ -36,7 +41,12 @@ pub mod test {
 
         // Positive test
         let created_user = user_repository
-            .create_user("email@email.com", "username", "hashed_password")
+            .create_user(
+                "email@email.com",
+                "hashed_password",
+                "First Name",
+                "Last Name",
+            )
             .await
             .unwrap();
 
@@ -59,7 +69,7 @@ pub mod test {
 
         let email_user = get_user_by_email.unwrap();
 
-        assert_eq!(email_user.username, "username");
+        assert_eq!(email_user.first_name, "First Name");
 
         // Negative test
         let get_user_by_false_email = user_repository
@@ -72,72 +82,34 @@ pub mod test {
     }
 
     #[sqlx::test]
-    async fn get_user_by_username_test(pool: PgPool) -> anyhow::Result<()> {
-        let user_repository = Arc::new(UserRepository::new(pool)) as DynUserRepositoryTrait;
-
-        // Positive test
-        let created_user = user_repository
-            .create_user("email@email.com", "username", "hashed_password")
-            .await
-            .unwrap();
-
-        user_repository.verify_registration(created_user.id).await?;
-
-        let get_user_by_username = user_repository
-            .get_user_by_username(&created_user.username)
-            .await?;
-
-        assert!(get_user_by_username.is_some());
-
-        let username_user = get_user_by_username.unwrap();
-
-        assert_eq!(username_user.username, "username");
-
-        // Negative test
-        let get_user_by_false_username = user_repository
-            .get_user_by_username("false_username")
-            .await?;
-
-        assert!(get_user_by_false_username.is_none());
-
-        Ok(())
-    }
-
-    #[sqlx::test]
     async fn search_user_test(pool: PgPool) -> anyhow::Result<()> {
         let user_repository = Arc::new(UserRepository::new(pool)) as DynUserRepositoryTrait;
 
         // Positive test
         let created_user = user_repository
-            .create_user("email@email.com", "username", "hashed_password")
+            .create_user(
+                "email@email.com",
+                "hashed_password",
+                "First Name",
+                "Last Name",
+            )
             .await
             .unwrap();
 
         user_repository.verify_registration(created_user.id).await?;
 
         let search_user_by_email = user_repository
-            .search_user_by_email_or_username(&created_user.email, "")
+            .get_user_by_email(&created_user.email)
             .await?;
 
         assert!(search_user_by_email.is_some());
 
         let email_user = search_user_by_email.unwrap();
-
-        assert_eq!(email_user.username, "username");
-
-        let search_user_by_id = user_repository
-            .search_user_by_email_or_username("", &created_user.username)
-            .await?;
-
-        assert!(search_user_by_id.is_some());
-
-        let id_user = search_user_by_id.unwrap();
-
-        assert_eq!(id_user.username, "username");
+        assert_eq!(email_user.first_name, "First Name");
 
         // Negative test
         let search_user_by_false_values = user_repository
-            .search_user_by_email_or_username("false_email@email.com", "false_username")
+            .get_user_by_email("false_email@email.com")
             .await?;
 
         assert!(search_user_by_false_values.is_none());
@@ -150,7 +122,12 @@ pub mod test {
         let user_repository = Arc::new(UserRepository::new(pool)) as DynUserRepositoryTrait;
 
         let created_user = user_repository
-            .create_user("email@email.com", "username", "hashed_password")
+            .create_user(
+                "email@email.com",
+                "hashed_password",
+                "First Name",
+                "Last Name",
+            )
             .await
             .unwrap();
 
@@ -161,9 +138,9 @@ pub mod test {
         let updated_user = user_repository
             .update_user(
                 created_user.id,
-                &created_user.email,
-                &created_user.username,
                 &created_user.password,
+                &created_user.first_name,
+                &created_user.last_name,
                 &test_bio,
                 &created_user.image,
             )
@@ -179,7 +156,12 @@ pub mod test {
         let user_repository = Arc::new(UserRepository::new(pool)) as DynUserRepositoryTrait;
 
         let created_user = user_repository
-            .create_user("email@email.com", "username", "hashed_password")
+            .create_user(
+                "email@email.com",
+                "hashed_password",
+                "First Name",
+                "Last Name",
+            )
             .await
             .unwrap();
 
@@ -202,7 +184,7 @@ pub mod test {
 
         let user_email = "email@email.com";
         let created_user = user_repository
-            .create_user(user_email, "username", "hashed_password")
+            .create_user(user_email, "hashed_password", "First Name", "Last Name")
             .await
             .unwrap();
 

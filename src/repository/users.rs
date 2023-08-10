@@ -14,9 +14,10 @@ pub struct UserEntity {
     pub id: i64,
     pub created_at: OffsetDateTime,
     pub updated_at: OffsetDateTime,
-    pub username: String,
     pub email: String,
     pub password: String,
+    pub first_name: String,
+    pub last_name: String,
     pub bio: String,
     pub image: String,
     pub token: Option<String>,
@@ -27,8 +28,9 @@ impl UserEntity {
     pub fn into_user_response(self) -> UserResponse {
         UserResponse {
             id: self.id,
-            username: self.username,
             email: self.email,
+            first_name: self.first_name,
+            last_name: self.last_name,
             bio: Some(self.bio),
             image: Some(self.image),
             token: self.token,
@@ -42,9 +44,10 @@ impl Default for UserEntity {
             id: 1,
             created_at: OffsetDateTime::from(SystemTime::now()),
             updated_at: OffsetDateTime::from(SystemTime::now()),
-            username: String::from("default username"),
             email: String::from("default email"),
             password: String::from("default password"),
+            first_name: String::from("default first name"),
+            last_name: String::from("default last name"),
             bio: String::from("default bio"),
             image: String::from("default image"),
             token: None,
@@ -56,26 +59,21 @@ impl Default for UserEntity {
 #[automock]
 #[async_trait]
 pub trait UserRepositoryTrait {
-    async fn search_user_by_email_or_username(
-        &self,
-        email: &str,
-        username: &str,
-    ) -> anyhow::Result<Option<UserEntity>>;
     async fn create_user(
         &self,
         email: &str,
-        username: &str,
         hashed_password: &str,
+        first_name: &str,
+        last_name: &str,
     ) -> anyhow::Result<UserEntity>;
     async fn get_user_by_email(&self, email: &str) -> anyhow::Result<Option<UserEntity>>;
-    async fn get_user_by_username(&self, username: &str) -> anyhow::Result<Option<UserEntity>>;
     async fn get_user_by_id(&self, id: i64) -> anyhow::Result<UserEntity>;
     async fn update_user(
         &self,
         id: i64,
-        email: &str,
-        username: &str,
         password: &str,
+        first_name: &str,
+        last_name: &str,
         bio: &str,
         image: &str,
     ) -> anyhow::Result<UserEntity>;
@@ -98,43 +96,12 @@ impl UserRepository {
 
 #[async_trait]
 impl UserRepositoryTrait for UserRepository {
-    async fn search_user_by_email_or_username(
-        &self,
-        email: &str,
-        username: &str,
-    ) -> anyhow::Result<Option<UserEntity>> {
-        query_as!(
-            UserEntity,
-            r#"
-                select
-                    id,
-                    created_at,
-                    updated_at,
-                    username,
-                    email,
-                    password,
-                    bio,
-                    image,
-                    token,
-                    verified_at
-                from users
-                where email = $1::varchar
-                or username = $2::varchar
-                and verified_at is not null
-            "#,
-            email,
-            username
-        )
-        .fetch_optional(&self.pool)
-        .await
-        .context("an unexpected error occured while search for users")
-    }
-
     async fn create_user(
         &self,
         email: &str,
-        username: &str,
         hashed_password: &str,
+        first_name: &str,
+        last_name: &str,
     ) -> anyhow::Result<UserEntity> {
         query_as!(
             UserEntity,
@@ -142,9 +109,10 @@ impl UserRepositoryTrait for UserRepository {
                 insert into users (
                         created_at,
                         updated_at,
-                        username,
                         email,
                         password,
+                        first_name,
+                        last_name,
                         bio,
                         image,
                         token
@@ -155,6 +123,7 @@ impl UserRepositoryTrait for UserRepository {
                         $1::varchar,
                         $2::varchar,
                         $3::varchar,
+                        $4::varchar,
                         '',
                         '',
                         NULL
@@ -163,17 +132,19 @@ impl UserRepositoryTrait for UserRepository {
                     id,
                     created_at,
                     updated_at,
-                    username,
                     email,
                     password,
+                    first_name,
+                    last_name,
                     bio,
                     image,
                     token,
                     verified_at
             "#,
-            username,
             email,
-            hashed_password
+            hashed_password,
+            first_name,
+            last_name
         )
         .fetch_one(&self.pool)
         .await
@@ -188,9 +159,10 @@ impl UserRepositoryTrait for UserRepository {
                     id,
                     created_at,
                     updated_at,
-                    username,
                     email,
                     password,
+                    first_name,
+                    last_name,
                     bio,
                     image,
                     token,
@@ -206,32 +178,6 @@ impl UserRepositoryTrait for UserRepository {
         .context("an unexpected error occured while querying user by email")
     }
 
-    async fn get_user_by_username(&self, username: &str) -> anyhow::Result<Option<UserEntity>> {
-        query_as!(
-            UserEntity,
-            r#"
-                select
-                    id,
-                    created_at,
-                    updated_at,
-                    username,
-                    email,
-                    password,
-                    bio,
-                    image,
-                    token,
-                    verified_at
-                from users
-                where username = $1::varchar
-                and verified_at is not null
-            "#,
-            username,
-        )
-        .fetch_optional(&self.pool)
-        .await
-        .context("an unexpected error occured while querying user by username")
-    }
-
     async fn get_user_by_id(&self, id: i64) -> anyhow::Result<UserEntity> {
         query_as!(
             UserEntity,
@@ -240,9 +186,10 @@ impl UserRepositoryTrait for UserRepository {
                     id,
                     created_at,
                     updated_at,
-                    username,
                     email,
                     password,
+                    first_name,
+                    last_name,
                     bio,
                     image,
                     token,
@@ -260,9 +207,9 @@ impl UserRepositoryTrait for UserRepository {
     async fn update_user(
         &self,
         id: i64,
-        email: &str,
-        username: &str,
         password: &str,
+        first_name: &str,
+        last_name: &str,
         bio: &str,
         image: &str,
     ) -> anyhow::Result<UserEntity> {
@@ -271,9 +218,9 @@ impl UserRepositoryTrait for UserRepository {
             r#"
                     update users
                     set
-                        username = $1::varchar,
-                        email = $2::varchar,
-                        password = $3::varchar,
+                        password = $1::varchar,
+                        first_name = $2::varchar,
+                        last_name = $3::varchar,
                         bio = $4::varchar,
                         image = $5::varchar,
                         updated_at = current_timestamp
@@ -283,17 +230,18 @@ impl UserRepositoryTrait for UserRepository {
                         id,
                         created_at,
                         updated_at,
-                        username,
                         email,
                         password,
+                        first_name,
+                        last_name,
                         bio,
                         image,
                         token,
                         verified_at
                 "#,
-            username,
-            email,
             password,
+            first_name,
+            last_name,
             bio,
             image,
             id
@@ -317,9 +265,10 @@ impl UserRepositoryTrait for UserRepository {
                         id,
                         created_at,
                         updated_at,
-                        username,
                         email,
                         password,
+                        first_name,
+                        last_name,
                         bio,
                         image,
                         token,
@@ -348,9 +297,10 @@ impl UserRepositoryTrait for UserRepository {
                         id,
                         created_at,
                         updated_at,
-                        username,
                         email,
                         password,
+                        first_name,
+                        last_name,
                         bio,
                         image,
                         token,

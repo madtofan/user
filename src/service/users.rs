@@ -6,7 +6,8 @@ use madtofan_microservice_common::{
     errors::{ServiceError, ServiceResult},
     user::{
         update_request::UpdateFields, GetUserRequest, LoginRequest, RefreshTokenRequest,
-        RegisterRequest, UserResponse, VerifyRegistrationRequest,
+        RegisterRequest, UserResponse, VerifyRegistrationRequest, VerifyTokenRequest,
+        VerifyTokenResponse,
     },
 };
 use mockall::automock;
@@ -25,6 +26,8 @@ pub trait UserServiceTrait {
         &self,
         request: VerifyRegistrationRequest,
     ) -> ServiceResult<UserResponse>;
+    async fn verify_token(&self, request: VerifyTokenRequest)
+        -> ServiceResult<VerifyTokenResponse>;
 }
 
 pub type DynUserServiceTrait = Arc<dyn UserServiceTrait + Send + Sync>;
@@ -176,5 +179,15 @@ impl UserServiceTrait for UserService {
         info!("updated user {:?} token", user.email);
 
         Ok(user.into_user_response())
+    }
+
+    async fn verify_token(
+        &self,
+        request: VerifyTokenRequest,
+    ) -> ServiceResult<VerifyTokenResponse> {
+        let user = self.repository.get_user_by_id(request.id).await?;
+        let valid = user.token.eq(&Some(request.token));
+
+        Ok(VerifyTokenResponse { valid })
     }
 }

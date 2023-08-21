@@ -1,6 +1,7 @@
 use madtofan_microservice_common::user::{
     user_server::User, GetUserRequest, LoginRequest, RefreshTokenRequest, RegisterRequest,
-    UpdateRequest, UserResponse, VerifyRegistrationRequest,
+    UpdateRequest, UserResponse, VerifyRegistrationRequest, VerifyTokenRequest,
+    VerifyTokenResponse,
 };
 use tonic::{Request, Response, Status};
 use tracing::log::info;
@@ -96,5 +97,14 @@ impl User for RequestHandler {
             .await?;
 
         Ok(Response::new(user))
+    }
+
+    async fn verify_token(
+        &self,
+        request: Request<VerifyTokenRequest>,
+    ) -> Result<Response<VerifyTokenResponse>, Status> {
+        let result = self.user_service.verify_token(request.into_inner()).await?;
+
+        Ok(Response::new(result))
     }
 }

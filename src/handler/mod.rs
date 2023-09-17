@@ -7,7 +7,7 @@ pub mod test {
     use clap::Parser;
     use madtofan_microservice_common::user::{
         update_request::UpdateFields, user_server::User, GetUserRequest, LoginRequest,
-        RefreshTokenRequest, RegisterRequest, UpdateRequest,
+        RefreshTokenRequest, RegisterRequest, UpdateRequest, VerifyTokenRequest,
     };
     use sqlx::PgPool;
     use tonic::Request;
@@ -239,6 +239,45 @@ pub mod test {
 
         let updated_token = &refreshed_token_user.into_inner().token;
         assert_eq!(updated_token, &Some(test_token));
+
+        Ok(())
+    }
+
+    #[sqlx::test]
+    async fn verify_token_test(pool: PgPool) -> anyhow::Result<()> {
+        let all_traits = initialize_handler(pool);
+
+        let created_user = all_traits
+            .user_repository
+            .create_user(
+                "email@email.com",
+                "hashed_password",
+                "First Name",
+                "Last Name",
+            )
+            .await
+            .unwrap();
+
+        assert_eq!(created_user.token, None);
+
+        let test_token = "this is a test token".to_string();
+
+        all_traits
+            .user_repository
+            .update_refresh_token(created_user.id, &test_token.clone())
+            .await?;
+
+        let verify_token_request = Request::new(VerifyTokenRequest {
+            id: created_user.id,
+            token: test_token.clone(),
+        });
+
+        let is_verified = all_traits
+            .handler
+            .verify_token(verify_token_request)
+            .await?;
+
+        assert!(is_verified.into_inner().valid);
 
         Ok(())
     }

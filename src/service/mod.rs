@@ -7,7 +7,7 @@ pub mod test {
     use clap::Parser;
     use madtofan_microservice_common::user::{
         update_request::UpdateFields, GetUserRequest, LoginRequest, RefreshTokenRequest,
-        RegisterRequest, VerifyRegistrationRequest,
+        RegisterRequest, VerifyRegistrationRequest, VerifyTokenRequest,
     };
     use sqlx::PgPool;
 
@@ -248,6 +248,45 @@ pub mod test {
 
         assert!(update_token.is_ok());
         assert_eq!(&update_token?.token, &Some(test_token));
+
+        Ok(())
+    }
+
+    #[sqlx::test]
+    async fn verify_token_test(pool: PgPool) -> anyhow::Result<()> {
+        let all_traits = initialize_handler(pool);
+
+        let created_user = all_traits
+            .user_repository
+            .create_user(
+                "email@email.com",
+                "hashed_password",
+                "First Name",
+                "Last Name",
+            )
+            .await
+            .unwrap();
+
+        assert_eq!(created_user.token, None);
+
+        let test_token = "this is a test token".to_string();
+
+        all_traits
+            .user_repository
+            .update_refresh_token(created_user.id, &test_token.clone())
+            .await?;
+
+        let verify_token_request = VerifyTokenRequest {
+            id: created_user.id,
+            token: test_token.clone(),
+        };
+
+        let verify_token = all_traits
+            .user_service
+            .verify_token(verify_token_request)
+            .await?;
+
+        assert!(verify_token.valid);
 
         Ok(())
     }

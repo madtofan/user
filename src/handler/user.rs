@@ -1,7 +1,7 @@
 use madtofan_microservice_common::user::{
-    user_server::User, GetUserRequest, LoginRequest, RefreshTokenRequest, RegisterRequest,
-    UpdateRequest, UserResponse, VerifyRegistrationRequest, VerifyTokenRequest,
-    VerifyTokenResponse,
+    user_server::User, GetUserRequest, LoginRequest, RefreshTokenRequest, RegisterRequest, Role,
+    RolesPermissionsRequest, StatusMessageResponse, UpdateRequest, UserResponse,
+    VerifyRegistrationRequest, VerifyTokenRequest, VerifyTokenResponse,
 };
 use tonic::{Request, Response, Status};
 use tracing::log::info;
@@ -103,8 +103,57 @@ impl User for RequestHandler {
         &self,
         request: Request<VerifyTokenRequest>,
     ) -> Result<Response<VerifyTokenResponse>, Status> {
+        info!("Verify Token Request!");
         let result = self.user_service.verify_token(request.into_inner()).await?;
 
         Ok(Response::new(result))
+    }
+
+    async fn add_permission(
+        &self,
+        request: Request<RolesPermissionsRequest>,
+    ) -> Result<Response<StatusMessageResponse>, Status> {
+        info!("Add Permission Request!");
+        todo!()
+    }
+
+    async fn delete_permission(
+        &self,
+        request: Request<RolesPermissionsRequest>,
+    ) -> Result<Response<StatusMessageResponse>, Status> {
+        info!("Delete Permission Request!");
+        todo!()
+    }
+
+    async fn add_role(
+        &self,
+        request: Request<RolesPermissionsRequest>,
+    ) -> Result<Response<StatusMessageResponse>, Status> {
+        info!("Add Role Request!");
+        todo!()
+    }
+
+    async fn delete_role(
+        &self,
+        request: Request<RolesPermissionsRequest>,
+    ) -> Result<Response<StatusMessageResponse>, Status> {
+        info!("Delete Role Request!");
+        todo!()
+    }
+
+    async fn authorize_role(
+        &self,
+        request: Request<Role>,
+    ) -> Result<Response<StatusMessageResponse>, Status> {
+        info!("Authorize Role Request!");
+        todo!()
+    }
+
+    async fn revoke_role(
+        &self,
+        request: Request<Role>,
+    ) -> Result<Response<StatusMessageResponse>, Status> {
+        info!("Revoke Role Request!");
+        todo!()
     }
 }

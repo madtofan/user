@@ -1,20 +1,32 @@
 use madtofan_microservice_common::user::{
-    user_server::User, GetUserRequest, LoginRequest, RefreshTokenRequest, RegisterRequest,
-    UpdateRequest, UserResponse, VerifyRegistrationRequest, VerifyTokenRequest,
-    VerifyTokenResponse,
+    user_server::User, GetUserRequest, LoginRequest, RefreshTokenRequest, RegisterRequest, Role,
+    RolesPermissionsRequest, StatusMessageResponse, UpdateRequest, UserResponse,
+    VerifyRegistrationRequest, VerifyTokenRequest, VerifyTokenResponse,
 };
 use tonic::{Request, Response, Status};
 use tracing::log::info;
 
-use crate::service::users::DynUserServiceTrait;
+use crate::service::{
+    permissions::DynPermissionServiceTrait, roles::DynRoleServiceTrait, users::DynUserServiceTrait,
+};
 
 pub struct RequestHandler {
     user_service: DynUserServiceTrait,
+    role_service: DynRoleServiceTrait,
+    permission_service: DynPermissionServiceTrait,
 }
 
 impl RequestHandler {
-    pub fn new(user_service: DynUserServiceTrait) -> Self {
-        Self { user_service }
+    pub fn new(
+        user_service: DynUserServiceTrait,
+        role_service: DynRoleServiceTrait,
+        permission_service: DynPermissionServiceTrait,
+    ) -> Self {
+        Self {
+            user_service,
+            role_service,
+            permission_service,
+        }
     }
 }
 
@@ -103,7 +115,77 @@ impl User for RequestHandler {
         &self,
         request: Request<VerifyTokenRequest>,
     ) -> Result<Response<VerifyTokenResponse>, Status> {
+        info!("Verify Token Request!");
         let result = self.user_service.verify_token(request.into_inner()).await?;
+
+        Ok(Response::new(result))
+    }
+
+    async fn add_permission(
+        &self,
+        request: Request<RolesPermissionsRequest>,
+    ) -> Result<Response<StatusMessageResponse>, Status> {
+        info!("Add Permission Request!");
+        let result = self
+            .permission_service
+            .add_permission(request.into_inner())
+            .await?;
+
+        Ok(Response::new(result))
+    }
+
+    async fn delete_permission(
+        &self,
+        request: Request<RolesPermissionsRequest>,
+    ) -> Result<Response<StatusMessageResponse>, Status> {
+        info!("Delete Permission Request!");
+        let result = self
+            .permission_service
+            .delete_permission(request.into_inner())
+            .await?;
+
+        Ok(Response::new(result))
+    }
+
+    async fn add_role(
+        &self,
+        request: Request<RolesPermissionsRequest>,
+    ) -> Result<Response<StatusMessageResponse>, Status> {
+        info!("Add Role Request!");
+        let result = self.role_service.add_role(request.into_inner()).await?;
+
+        Ok(Response::new(result))
+    }
+
+    async fn delete_role(
+        &self,
+        request: Request<RolesPermissionsRequest>,
+    ) -> Result<Response<StatusMessageResponse>, Status> {
+        info!("Delete Role Request!");
+        let result = self.role_service.delete_role(request.into_inner()).await?;
+
+        Ok(Response::new(result))
+    }
+
+    async fn authorize_role(
+        &self,
+        request: Request<Role>,
+    ) -> Result<Response<StatusMessageResponse>, Status> {
+        info!("Authorize Role Request!");
+        let result = self
+            .role_service
+            .authorize_role(request.into_inner())
+            .await?;
+
+        Ok(Response::new(result))
+    }
+
+    async fn revoke_role(
+        &self,
+        request: Request<Role>,
+    ) -> Result<Response<StatusMessageResponse>, Status> {
+        info!("Revoke Role Request!");
+        let result = self.role_service.revoke_role(request.into_inner()).await?;
 
         Ok(Response::new(result))
     }

@@ -1,0 +1,46 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n                select\n                    r.id as id,\n                    r.name as name,\n                    r.created_at as created_at,\n                    r.updated_at as updated_at,\n                    array_agg((\n                        select name from permissions where id = rp.permission_id\n                    )) as \"permissions!: Vec<String>\"\n                from roles as r\n                inner join roles_permissions as rp\n                    on r.id = rp.role_id\n                where r.name = $1::varchar\n                group by r.id\n            ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 1,
+        "name": "name",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 2,
+        "name": "created_at",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 3,
+        "name": "updated_at",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 4,
+        "name": "permissions!: Vec<String>",
+        "type_info": "VarcharArray"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Varchar"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      null
+    ]
+  },
+  "hash": "faa0f9c07137a58843891f9935eabdae78de5f6d540c3de41af7a3d16436056a"
+}

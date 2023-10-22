@@ -1,3 +1,5 @@
+pub mod permissions;
+pub mod roles;
 pub mod users;
 
 #[cfg(test)]
@@ -7,29 +9,55 @@ pub mod test {
     use clap::Parser;
     use madtofan_microservice_common::user::{
         update_request::UpdateFields, GetUserRequest, LoginRequest, RefreshTokenRequest,
-        RegisterRequest, VerifyRegistrationRequest, VerifyTokenRequest,
+        RegisterRequest, Role, RolesPermissionsRequest, VerifyRegistrationRequest,
+        VerifyTokenRequest,
     };
     use sqlx::PgPool;
 
     use crate::{
         config::AppConfig,
-        repository::users::{DynUserRepositoryTrait, UserRepository},
-        service::users::{DynUserServiceTrait, UserService},
+        repository::{
+            permissions::{DynPermissionRepositoryTrait, PermissionRepository},
+            roles::{DynRoleRepositoryTrait, RoleRepository},
+            users::{DynUserRepositoryTrait, UserRepository},
+        },
     };
+
+    use super::{
+        permissions::{DynPermissionServiceTrait, PermissionService},
+        roles::{DynRoleServiceTrait, RoleService},
+        users::{DynUserServiceTrait, UserService},
+    };
+
     struct AllTraits {
         user_service: DynUserServiceTrait,
         user_repository: DynUserRepositoryTrait,
+        role_service: DynRoleServiceTrait,
+        role_repository: DynRoleRepositoryTrait,
+        permission_service: DynPermissionServiceTrait,
+        permission_repository: DynPermissionRepositoryTrait,
     }
 
     fn initialize_handler(pool: PgPool) -> AllTraits {
         let config = Arc::new(AppConfig::parse());
-        let user_repository = Arc::new(UserRepository::new(pool)) as DynUserRepositoryTrait;
+        let user_repository = Arc::new(UserRepository::new(pool.clone())) as DynUserRepositoryTrait;
         let user_service =
             Arc::new(UserService::new(user_repository.clone(), config)) as DynUserServiceTrait;
+        let role_repository = Arc::new(RoleRepository::new(pool.clone())) as DynRoleRepositoryTrait;
+        let role_service =
+            Arc::new(RoleService::new(role_repository.clone())) as DynRoleServiceTrait;
+        let permission_repository =
+            Arc::new(PermissionRepository::new(pool.clone())) as DynPermissionRepositoryTrait;
+        let permission_service = Arc::new(PermissionService::new(permission_repository.clone()))
+            as DynPermissionServiceTrait;
 
         AllTraits {
             user_service,
             user_repository,
+            role_repository,
+            role_service,
+            permission_repository,
+            permission_service,
         }
     }
 
@@ -287,6 +315,191 @@ pub mod test {
             .await?;
 
         assert!(verify_token.valid);
+
+        Ok(())
+    }
+
+    #[sqlx::test]
+    async fn add_role_test(pool: PgPool) -> anyhow::Result<()> {
+        let all_traits = initialize_handler(pool);
+
+        let role_name = "role_name".to_string();
+        let request = RolesPermissionsRequest {
+            name: role_name.clone(),
+        };
+        all_traits.role_service.add_role(request).await?;
+
+        let role = all_traits.role_repository.get_roles(0, 10).await?;
+
+        assert_eq!(role.len(), 1);
+        assert_eq!(role.first().unwrap().name, role_name);
+
+        Ok(())
+    }
+
+    #[sqlx::test]
+    async fn delete_role_test(pool: PgPool) -> anyhow::Result<()> {
+        let all_traits = initialize_handler(pool);
+
+        let role_to_delete = "role_to_delete_name".to_string();
+        all_traits
+            .role_repository
+            .create_role(&role_to_delete)
+            .await?;
+        let role_to_not_delete = "role_to_not_delete_name".to_string();
+        all_traits
+            .role_repository
+            .create_role(&role_to_not_delete)
+            .await?;
+
+        let role = all_traits.role_repository.get_roles(0, 10).await?;
+
+        assert_eq!(role.len(), 2);
+
+        let request = RolesPermissionsRequest {
+            name: role_to_delete.clone(),
+        };
+        all_traits.role_service.delete_role(request).await?;
+
+        let role = all_traits.role_repository.get_roles(0, 10).await?;
+
+        assert_eq!(role.len(), 1);
+        assert_eq!(role.first().unwrap().name, role_to_not_delete);
+
+        Ok(())
+    }
+
+    #[sqlx::test]
+    async fn add_permission_test(pool: PgPool) -> anyhow::Result<()> {
+        let all_traits = initialize_handler(pool);
+
+        let permission_name = "permission_name".to_string();
+        let request = RolesPermissionsRequest {
+            name: permission_name.clone(),
+        };
+        all_traits
+            .permission_service
+            .add_permission(request)
+            .await?;
+
+        let permission = all_traits
+            .permission_repository
+            .get_permissions(0, 10)
+            .await?;
+
+        assert_eq!(permission.len(), 1);
+        assert_eq!(permission.first().unwrap().name, permission_name);
+
+        Ok(())
+    }
+
+    #[sqlx::test]
+    async fn delete_permission_test(pool: PgPool) -> anyhow::Result<()> {
+        let all_traits = initialize_handler(pool);
+
+        let permission_to_delete = "permission_to_delete_name".to_string();
+        all_traits
+            .permission_repository
+            .create_permission(&permission_to_delete)
+            .await?;
+        let permission_to_not_delete = "permission_to_not_delete_name".to_string();
+        all_traits
+            .permission_repository
+            .create_permission(&permission_to_not_delete)
+            .await?;
+
+        let permission = all_traits
+            .permission_repository
+            .get_permissions(0, 10)
+            .await?;
+
+        assert_eq!(permission.len(), 2);
+
+        let request = RolesPermissionsRequest {
+            name: permission_to_delete.clone(),
+        };
+        all_traits
+            .permission_service
+            .delete_permission(request)
+            .await?;
+
+        let permission = all_traits
+            .permission_repository
+            .get_permissions(0, 10)
+            .await?;
+
+        assert_eq!(permission.len(), 1);
+        assert_eq!(permission.first().unwrap().name, permission_to_not_delete);
+
+        Ok(())
+    }
+
+    #[sqlx::test]
+    async fn authorize_role_test(pool: PgPool) -> anyhow::Result<()> {
+        let all_traits = initialize_handler(pool);
+
+        let role_name = "role_name".to_string();
+        all_traits.role_repository.create_role(&role_name).await?;
+        let permission_name = "permission_name".to_string();
+        all_traits
+            .permission_repository
+            .create_permission(&permission_name)
+            .await?;
+
+        let request = Role {
+            name: role_name.clone(),
+            permissions: vec![permission_name.clone()],
+        };
+        all_traits.role_service.authorize_role(request).await?;
+        let role = all_traits
+            .role_repository
+            .get_role(&role_name)
+            .await?
+            .unwrap();
+
+        assert_eq!(role.permissions.len(), 1);
+        assert_eq!(role.permissions.first().unwrap(), &permission_name);
+
+        Ok(())
+    }
+
+    #[sqlx::test]
+    async fn revoke_role_test(pool: PgPool) -> anyhow::Result<()> {
+        let all_traits = initialize_handler(pool);
+
+        let role_name = "role_name".to_string();
+        all_traits.role_repository.create_role(&role_name).await?;
+        let permission_one_name = "permission_one_name".to_string();
+        all_traits
+            .permission_repository
+            .create_permission(&permission_one_name)
+            .await?;
+        let permission_two_name = "permission_two_name".to_string();
+        all_traits
+            .permission_repository
+            .create_permission(&permission_two_name)
+            .await?;
+        all_traits
+            .role_repository
+            .link_permissions(
+                &role_name,
+                vec![permission_one_name.clone(), permission_two_name.clone()],
+            )
+            .await?;
+
+        let request = Role {
+            name: role_name.clone(),
+            permissions: vec![permission_one_name.clone()],
+        };
+        all_traits.role_service.revoke_role(request).await?;
+        let role = all_traits
+            .role_repository
+            .get_role(&role_name)
+            .await?
+            .unwrap();
+
+        assert_eq!(role.permissions.len(), 1);
+        assert_eq!(role.permissions.first().unwrap(), &permission_two_name);
 
         Ok(())
     }

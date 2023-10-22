@@ -34,6 +34,7 @@ impl UserEntity {
             bio: Some(self.bio),
             image: Some(self.image),
             token: self.token,
+            roles: vec![],
         }
     }
 }

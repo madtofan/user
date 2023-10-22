@@ -1,0 +1,40 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n                insert into permissions (\n                        created_at,\n                        updated_at,\n                        name\n                    )\n                values (\n                        current_timestamp,\n                        current_timestamp,\n                        $1::varchar\n                    )\n                returning\n                    id,\n                    created_at,\n                    updated_at,\n                    name\n            ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 1,
+        "name": "created_at",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 2,
+        "name": "updated_at",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 3,
+        "name": "name",
+        "type_info": "Varchar"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Varchar"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "1c991887ddfbed2e8ea797612be5c271e31f4550056d1df7bb8be6fc5acb770f"
+}

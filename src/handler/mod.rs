@@ -32,9 +32,7 @@ pub mod test {
         handler: RequestHandler,
         user_service: DynUserServiceTrait,
         user_repository: DynUserRepositoryTrait,
-        role_service: DynRoleServiceTrait,
         role_repository: DynRoleRepositoryTrait,
-        permission_service: DynPermissionServiceTrait,
         permission_repository: DynPermissionRepositoryTrait,
     }
 
@@ -50,19 +48,13 @@ pub mod test {
             Arc::new(PermissionRepository::new(pool.clone())) as DynPermissionRepositoryTrait;
         let permission_service = Arc::new(PermissionService::new(permission_repository.clone()))
             as DynPermissionServiceTrait;
-        let handler = RequestHandler::new(
-            user_service.clone(),
-            role_service.clone(),
-            permission_service.clone(),
-        );
+        let handler = RequestHandler::new(user_service.clone(), role_service, permission_service);
 
         AllTraits {
             handler,
             user_service,
             user_repository,
-            role_service,
             role_repository,
-            permission_service,
             permission_repository,
         }
     }

@@ -1,0 +1,29 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n                delete from roles_permissions \n                where (role_id, permission_id) in (select * from unnest (\n                        $1::bigint[],\n                        $2::bigint[]\n                    ))\n                returning *\n            ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "role_id",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 1,
+        "name": "permission_id",
+        "type_info": "Int4"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int8Array",
+        "Int8Array"
+      ]
+    },
+    "nullable": [
+      false,
+      false
+    ]
+  },
+  "hash": "895f2b4bbb2001dc213693d5085e7f61ddca488588a97546c2e59f0abb1123a7"
+}

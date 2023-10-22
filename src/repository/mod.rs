@@ -210,7 +210,7 @@ pub mod test {
         let role_repository = Arc::new(RoleRepository::new(pool)) as DynRoleRepositoryTrait;
 
         let role_name = "role_name";
-        let created_role = role_repository.create_role(role_name).await?;
+        role_repository.create_role(role_name).await?;
 
         let roles = role_repository.get_roles(0, 10).await?;
 
@@ -225,9 +225,9 @@ pub mod test {
         let role_repository = Arc::new(RoleRepository::new(pool)) as DynRoleRepositoryTrait;
 
         let deleted_role_name = "deleted_role_name";
-        let created_role = role_repository.create_role(deleted_role_name).await?;
+        role_repository.create_role(deleted_role_name).await?;
         let not_deleted_role_name = "not_deleted_role_name";
-        let created_role = role_repository.create_role(not_deleted_role_name).await?;
+        role_repository.create_role(not_deleted_role_name).await?;
 
         let roles = role_repository.get_roles(0, 10).await?;
         assert_eq!(roles.len(), 2);
@@ -249,7 +249,7 @@ pub mod test {
             Arc::new(PermissionRepository::new(pool)) as DynPermissionRepositoryTrait;
 
         let permission_name = "permission_name";
-        let created_permission = permission_repository
+        permission_repository
             .create_permission(permission_name)
             .await?;
 
@@ -328,13 +328,13 @@ pub mod test {
             Arc::new(PermissionRepository::new(pool)) as DynPermissionRepositoryTrait;
 
         let role_name = "role_name";
-        let created_role = role_repository.create_role(role_name).await?;
+        role_repository.create_role(role_name).await?;
         let permission_one_name = "permission_one_name";
-        let created_permission = permission_repository
+        permission_repository
             .create_permission(permission_one_name)
             .await?;
         let permission_two_name = "permission_two_name";
-        let created_permission = permission_repository
+        permission_repository
             .create_permission(permission_two_name)
             .await?;
         role_repository

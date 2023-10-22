@@ -125,7 +125,7 @@ impl RoleRepositoryTrait for RoleRepository {
         .fetch_one(&self.pool)
         .await
         .context("an unexpected error occured while obtaining the role to link")?;
-        let role_ids = vec![role_entity.id; permissions.len() as usize];
+        let role_ids = vec![role_entity.id; permissions.len()];
 
         let permission_ids = query!(
             r#"
@@ -181,7 +181,7 @@ impl RoleRepositoryTrait for RoleRepository {
         .fetch_one(&self.pool)
         .await
         .context("an unexpected error occured while obtaining the role to unlink")?;
-        let role_ids = vec![role_entity.id; permissions.len() as usize];
+        let role_ids = vec![role_entity.id; permissions.len()];
 
         let permission_ids = query!(
             r#"

@@ -8,13 +8,16 @@ pub mod test {
 
     use sqlx::PgPool;
 
-    use crate::repository::users::{DynUserRepositoryTrait, UserRepository};
+    use crate::repository::{
+        permissions::{DynPermissionRepositoryTrait, PermissionRepository},
+        roles::{DynRoleRepositoryTrait, RoleRepository},
+        users::{DynUserRepositoryTrait, UserRepository},
+    };
 
     #[sqlx::test]
     async fn get_user_by_id_test(pool: PgPool) -> anyhow::Result<()> {
         let user_repository = Arc::new(UserRepository::new(pool)) as DynUserRepositoryTrait;
 
-        // Positive test
         let created_user = user_repository
             .create_user(
                 "email@email.com",
@@ -29,7 +32,6 @@ pub mod test {
 
         assert_eq!(get_user_by_id.email, "email@email.com");
 
-        // Negative test
         let get_user_by_false_id = user_repository.get_user_by_id(-1).await;
 
         assert!(get_user_by_false_id.is_err());
@@ -199,6 +201,165 @@ pub mod test {
         let get_user = user_repository.get_user_by_email(user_email).await?;
 
         assert!(get_user.is_some());
+
+        Ok(())
+    }
+
+    #[sqlx::test]
+    async fn create_role_test(pool: PgPool) -> anyhow::Result<()> {
+        let role_repository = Arc::new(RoleRepository::new(pool)) as DynRoleRepositoryTrait;
+
+        let role_name = "role_name";
+        let created_role = role_repository.create_role(role_name).await?;
+
+        let roles = role_repository.get_roles(0, 10).await?;
+
+        assert_eq!(roles.len(), 1);
+        assert_eq!(roles.first().unwrap().name, role_name);
+
+        Ok(())
+    }
+
+    #[sqlx::test]
+    async fn delete_role_test(pool: PgPool) -> anyhow::Result<()> {
+        let role_repository = Arc::new(RoleRepository::new(pool)) as DynRoleRepositoryTrait;
+
+        let deleted_role_name = "deleted_role_name";
+        let created_role = role_repository.create_role(deleted_role_name).await?;
+        let not_deleted_role_name = "not_deleted_role_name";
+        let created_role = role_repository.create_role(not_deleted_role_name).await?;
+
+        let roles = role_repository.get_roles(0, 10).await?;
+        assert_eq!(roles.len(), 2);
+
+        let deleted_role = role_repository.delete_role(deleted_role_name).await?;
+        assert!(deleted_role.is_some());
+        assert_eq!(deleted_role.unwrap().name, deleted_role_name);
+
+        let roles = role_repository.get_roles(0, 10).await?;
+        assert_eq!(roles.len(), 1);
+        assert_eq!(roles.first().unwrap().name, not_deleted_role_name);
+
+        Ok(())
+    }
+
+    #[sqlx::test]
+    async fn create_permissions_test(pool: PgPool) -> anyhow::Result<()> {
+        let permission_repository =
+            Arc::new(PermissionRepository::new(pool)) as DynPermissionRepositoryTrait;
+
+        let permission_name = "permission_name";
+        let created_permission = permission_repository
+            .create_permission(permission_name)
+            .await?;
+
+        let permissions = permission_repository.get_permissions(0, 10).await?;
+
+        assert_eq!(permissions.len(), 1);
+        assert_eq!(permissions.first().unwrap().name, permission_name);
+
+        Ok(())
+    }
+
+    #[sqlx::test]
+    async fn delete_permissions_test(pool: PgPool) -> anyhow::Result<()> {
+        let permission_repository =
+            Arc::new(PermissionRepository::new(pool)) as DynPermissionRepositoryTrait;
+
+        let deleted_permission_name = "deleted_permission_name";
+        permission_repository
+            .create_permission(deleted_permission_name)
+            .await?;
+        let not_deleted_permission_name = "not_deleted_permission_name";
+        permission_repository
+            .create_permission(not_deleted_permission_name)
+            .await?;
+
+        let permissions = permission_repository.get_permissions(0, 10).await?;
+        assert_eq!(permissions.len(), 2);
+
+        let deleted_permission = permission_repository
+            .delete_permission(deleted_permission_name)
+            .await?;
+        assert!(deleted_permission.is_some());
+        assert_eq!(deleted_permission.unwrap().name, deleted_permission_name);
+
+        let permissions = permission_repository.get_permissions(0, 10).await?;
+
+        assert_eq!(permissions.len(), 1);
+        assert_eq!(
+            permissions.first().unwrap().name,
+            not_deleted_permission_name
+        );
+
+        Ok(())
+    }
+
+    #[sqlx::test]
+    async fn link_role_permission_test(pool: PgPool) -> anyhow::Result<()> {
+        let role_repository = Arc::new(RoleRepository::new(pool.clone())) as DynRoleRepositoryTrait;
+        let permission_repository =
+            Arc::new(PermissionRepository::new(pool)) as DynPermissionRepositoryTrait;
+
+        let role_name = "role_name";
+        role_repository.create_role(role_name).await?;
+        let permission_name = "permission_name";
+        permission_repository
+            .create_permission(permission_name)
+            .await?;
+        role_repository
+            .link_permissions(role_name, vec![permission_name.to_string()])
+            .await?;
+
+        let role_option = role_repository.get_role(role_name).await?;
+        assert!(role_option.is_some());
+        let role = role_option.unwrap();
+        assert_eq!(role.name, role_name);
+        assert_eq!(role.permissions.len(), 1);
+        assert_eq!(role.permissions.first().unwrap(), permission_name);
+
+        Ok(())
+    }
+
+    #[sqlx::test]
+    async fn unlink_role_permission_test(pool: PgPool) -> anyhow::Result<()> {
+        let role_repository = Arc::new(RoleRepository::new(pool.clone())) as DynRoleRepositoryTrait;
+        let permission_repository =
+            Arc::new(PermissionRepository::new(pool)) as DynPermissionRepositoryTrait;
+
+        let role_name = "role_name";
+        let created_role = role_repository.create_role(role_name).await?;
+        let permission_one_name = "permission_one_name";
+        let created_permission = permission_repository
+            .create_permission(permission_one_name)
+            .await?;
+        let permission_two_name = "permission_two_name";
+        let created_permission = permission_repository
+            .create_permission(permission_two_name)
+            .await?;
+        role_repository
+            .link_permissions(
+                role_name,
+                vec![
+                    permission_one_name.to_string(),
+                    permission_two_name.to_string(),
+                ],
+            )
+            .await?;
+
+        let role_option = role_repository.get_role(role_name).await?;
+        assert!(role_option.is_some());
+        let role = role_option.unwrap();
+        assert_eq!(role.name, role_name);
+        assert_eq!(role.permissions.len(), 2);
+
+        role_repository
+            .unlink_permissions(role_name, vec![permission_one_name.to_string()])
+            .await?;
+
+        let role = role_repository.get_role(role_name).await?.unwrap();
+        assert_eq!(role.permissions.len(), 1);
+        assert_eq!(role.permissions.first().unwrap(), permission_two_name);
 
         Ok(())
     }

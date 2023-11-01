@@ -50,6 +50,7 @@ pub trait RoleRepositoryTrait {
         permissions: Vec<String>,
     ) -> anyhow::Result<RolePermissionsEntity>;
     async fn get_roles(&self, offset: i64, limit: i64) -> anyhow::Result<Vec<RoleEntity>>;
+    async fn get_roles_count(&self) -> anyhow::Result<i64>;
     async fn get_role(&self, name: &str) -> anyhow::Result<Option<RolePermissionsEntity>>;
 }
 
@@ -237,6 +238,19 @@ impl RoleRepositoryTrait for RoleRepository {
         .fetch_all(&self.pool)
         .await
         .context("an unexpected error occured while obtaining the roles")
+    }
+    async fn get_roles_count(&self) -> anyhow::Result<i64> {
+        let count_result = query!(
+            r#"
+                select
+                    count(*)
+                from roles
+            "#,
+        )
+        .fetch_one(&self.pool)
+        .await?;
+
+        Ok(count_result.count.unwrap())
     }
     async fn get_role(&self, name: &str) -> anyhow::Result<Option<RolePermissionsEntity>> {
         query_as!(

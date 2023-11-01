@@ -2,7 +2,10 @@ use crate::repository::permissions::DynPermissionRepositoryTrait;
 use async_trait::async_trait;
 use madtofan_microservice_common::{
     errors::ServiceResult,
-    user::{RolesPermissionsRequest, StatusMessageResponse},
+    user::{
+        GetListRequest, ListResponse, RolePermission, RolesPermissionsRequest,
+        StatusMessageResponse,
+    },
 };
 use std::sync::Arc;
 use tracing::log::info;
@@ -17,7 +20,7 @@ pub trait PermissionServiceTrait {
         &self,
         request: RolesPermissionsRequest,
     ) -> ServiceResult<StatusMessageResponse>;
-    async fn get_permissions(&self, offset: i64, limit: i64) -> ServiceResult<Vec<String>>;
+    async fn list_permissions(&self, request: GetListRequest) -> ServiceResult<ListResponse>;
 }
 
 pub type DynPermissionServiceTrait = Arc<dyn PermissionServiceTrait + Send + Sync>;
@@ -66,15 +69,24 @@ impl PermissionServiceTrait for PermissionService {
 
         Ok(StatusMessageResponse { message })
     }
-    async fn get_permissions(&self, offset: i64, limit: i64) -> ServiceResult<Vec<String>> {
+    async fn list_permissions(&self, request: GetListRequest) -> ServiceResult<ListResponse> {
+        let offset = request.offset;
+        let limit = request.limit;
         info!(
             "getting permissions with offset {} and limit {}",
             offset, limit
         );
         let permissions = self.repository.get_permissions(offset, limit).await?;
-        return Ok(permissions
-            .into_iter()
-            .map(|permission| permission.name)
-            .collect());
+        let count = self.repository.get_permissions_count().await?;
+        return Ok(ListResponse {
+            list: permissions
+                .into_iter()
+                .map(|role| RolePermission {
+                    id: role.id,
+                    name: role.name,
+                })
+                .collect(),
+            count,
+        });
     }
 }

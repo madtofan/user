@@ -6,9 +6,9 @@ pub mod test {
 
     use clap::Parser;
     use madtofan_microservice_common::user::{
-        update_request::UpdateFields, user_server::User, GetUserRequest, LoginRequest,
-        RefreshTokenRequest, RegisterRequest, Role, RolesPermissionsRequest, UpdateRequest,
-        VerifyTokenRequest,
+        update_request::UpdateFields, user_server::User, GetListRequest, GetUserRequest,
+        LoginRequest, RefreshTokenRequest, RegisterRequest, Role, RolesPermissionsRequest,
+        UpdateRequest, VerifyTokenRequest,
     };
     use sqlx::PgPool;
     use tonic::Request;
@@ -146,7 +146,7 @@ pub mod test {
             id: registered_user.id,
         });
 
-        let get_user = all_traits.handler.get(get_request).await?;
+        let get_user = all_traits.handler.get_user(get_request).await?;
 
         assert_eq!(&get_user.into_inner().email, &email);
 
@@ -478,6 +478,76 @@ pub mod test {
         assert_eq!(role.permissions.len(), 1);
         assert_eq!(role.permissions.first().unwrap(), &permission_two_name);
 
+        Ok(())
+    }
+
+    #[sqlx::test]
+    async fn list_roles_test(pool: PgPool) -> anyhow::Result<()> {
+        let all_traits = initialize_handler(pool);
+
+        let role_name = "role_name".to_string();
+        all_traits.role_repository.create_role(&role_name).await?;
+        let request = Request::new(GetListRequest {
+            offset: 0,
+            limit: 10,
+        });
+        let roles = all_traits.handler.list_roles(request).await?.into_inner();
+
+        assert_eq!(roles.count, 1);
+        assert_eq!(roles.list.first().unwrap().name, role_name);
+
+        let role_name_2 = "role_name_2".to_string();
+        all_traits.role_repository.create_role(&role_name_2).await?;
+        let request = Request::new(GetListRequest {
+            offset: 0,
+            limit: 10,
+        });
+        let roles = all_traits.handler.list_roles(request).await?.into_inner();
+
+        assert_eq!(roles.count, 2);
+        assert_eq!(roles.list.first().unwrap().name, role_name_2);
+        Ok(())
+    }
+
+    #[sqlx::test]
+    async fn list_permissions_test(pool: PgPool) -> anyhow::Result<()> {
+        let all_traits = initialize_handler(pool);
+
+        let permission_name = "permission_name".to_string();
+        all_traits
+            .permission_repository
+            .create_permission(&permission_name)
+            .await?;
+        let request = Request::new(GetListRequest {
+            offset: 0,
+            limit: 10,
+        });
+        let permissions = all_traits
+            .handler
+            .list_permissions(request)
+            .await?
+            .into_inner();
+
+        assert_eq!(permissions.count, 1);
+        assert_eq!(permissions.list.first().unwrap().name, permission_name);
+
+        let permission_name_2 = "permission_name_2".to_string();
+        all_traits
+            .permission_repository
+            .create_permission(&permission_name_2)
+            .await?;
+        let request = Request::new(GetListRequest {
+            offset: 0,
+            limit: 10,
+        });
+        let permissions = all_traits
+            .handler
+            .list_permissions(request)
+            .await?
+            .into_inner();
+
+        assert_eq!(permissions.count, 2);
+        assert_eq!(permissions.list.first().unwrap().name, permission_name_2);
         Ok(())
     }
 }

@@ -1,7 +1,8 @@
 use madtofan_microservice_common::user::{
-    user_server::User, GetUserRequest, LoginRequest, RefreshTokenRequest, RegisterRequest, Role,
-    RolesPermissionsRequest, StatusMessageResponse, UpdateRequest, UserResponse,
-    VerifyRegistrationRequest, VerifyTokenRequest, VerifyTokenResponse,
+    user_server::User, GetListRequest, GetUserRequest, ListResponse, LoginRequest,
+    RefreshTokenRequest, RegisterRequest, Role, RolesPermissionsRequest, StatusMessageResponse,
+    UpdateRequest, UserResponse, VerifyRegistrationRequest, VerifyTokenRequest,
+    VerifyTokenResponse,
 };
 use tonic::{Request, Response, Status};
 use tracing::log::info;
@@ -68,7 +69,7 @@ impl User for RequestHandler {
         Ok(Response::new(verified_user))
     }
 
-    async fn get(
+    async fn get_user(
         &self,
         request: Request<GetUserRequest>,
     ) -> Result<Response<UserResponse>, Status> {
@@ -186,6 +187,29 @@ impl User for RequestHandler {
     ) -> Result<Response<StatusMessageResponse>, Status> {
         info!("Revoke Role Request!");
         let result = self.role_service.revoke_role(request.into_inner()).await?;
+
+        Ok(Response::new(result))
+    }
+
+    async fn list_roles(
+        &self,
+        request: Request<GetListRequest>,
+    ) -> Result<Response<ListResponse>, Status> {
+        info!("Revoke Role Request!");
+        let result = self.role_service.list_roles(request.into_inner()).await?;
+
+        Ok(Response::new(result))
+    }
+
+    async fn list_permissions(
+        &self,
+        request: Request<GetListRequest>,
+    ) -> Result<Response<ListResponse>, Status> {
+        info!("Revoke Role Request!");
+        let result = self
+            .permission_service
+            .list_permissions(request.into_inner())
+            .await?;
 
         Ok(Response::new(result))
     }

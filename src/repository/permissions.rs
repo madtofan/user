@@ -4,7 +4,7 @@ use std::{sync::Arc, time::SystemTime};
 use async_trait::async_trait;
 use madtofan_microservice_common::repository::connection_pool::ServiceConnectionPool;
 use mockall::automock;
-use sqlx::{query_as, types::time::OffsetDateTime, FromRow};
+use sqlx::{query, query_as, types::time::OffsetDateTime, FromRow};
 
 #[derive(FromRow)]
 pub struct PermissionEntity {
@@ -35,6 +35,7 @@ pub trait PermissionRepositoryTrait {
         offset: i64,
         limit: i64,
     ) -> anyhow::Result<Vec<PermissionEntity>>;
+    async fn get_permissions_count(&self) -> anyhow::Result<i64>;
 }
 
 pub type DynPermissionRepositoryTrait = Arc<dyn PermissionRepositoryTrait + Send + Sync>;
@@ -116,5 +117,18 @@ impl PermissionRepositoryTrait for PermissionRepository {
         .fetch_all(&self.pool)
         .await
         .context("an unexpected error occured while obtaining the permissions")
+    }
+    async fn get_permissions_count(&self) -> anyhow::Result<i64> {
+        let count_result = query!(
+            r#"
+                select
+                    count(*)
+                from permissions
+            "#,
+        )
+        .fetch_one(&self.pool)
+        .await?;
+
+        Ok(count_result.count.unwrap())
     }
 }

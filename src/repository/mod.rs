@@ -221,6 +221,20 @@ pub mod test {
     }
 
     #[sqlx::test]
+    async fn get_roles_count_test(pool: PgPool) -> anyhow::Result<()> {
+        let role_repository = Arc::new(RoleRepository::new(pool)) as DynRoleRepositoryTrait;
+
+        role_repository.create_role("role_name").await?;
+        let roles_count = role_repository.get_roles_count().await?;
+        assert_eq!(roles_count, 1);
+
+        role_repository.create_role("role_name_2").await?;
+        let roles_count = role_repository.get_roles_count().await?;
+        assert_eq!(roles_count, 2);
+        Ok(())
+    }
+
+    #[sqlx::test]
     async fn delete_role_test(pool: PgPool) -> anyhow::Result<()> {
         let role_repository = Arc::new(RoleRepository::new(pool)) as DynRoleRepositoryTrait;
 
@@ -258,6 +272,25 @@ pub mod test {
         assert_eq!(permissions.len(), 1);
         assert_eq!(permissions.first().unwrap().name, permission_name);
 
+        Ok(())
+    }
+
+    #[sqlx::test]
+    async fn get_permissions_count_test(pool: PgPool) -> anyhow::Result<()> {
+        let permission_repository =
+            Arc::new(PermissionRepository::new(pool)) as DynPermissionRepositoryTrait;
+
+        permission_repository
+            .create_permission("permission_name")
+            .await?;
+        let permissions_count = permission_repository.get_permissions_count().await?;
+        assert_eq!(permissions_count, 1);
+
+        permission_repository
+            .create_permission("permission_name_2")
+            .await?;
+        let permissions_count = permission_repository.get_permissions_count().await?;
+        assert_eq!(permissions_count, 2);
         Ok(())
     }
 

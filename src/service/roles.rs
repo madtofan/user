@@ -2,7 +2,10 @@ use crate::repository::roles::DynRoleRepositoryTrait;
 use async_trait::async_trait;
 use madtofan_microservice_common::{
     errors::ServiceResult,
-    user::{Role, RolesPermissionsRequest, StatusMessageResponse},
+    user::{
+        GetListRequest, ListResponse, Role, RolePermission, RolesPermissionsRequest,
+        StatusMessageResponse,
+    },
 };
 use mockall::automock;
 use std::sync::Arc;
@@ -21,6 +24,7 @@ pub trait RoleServiceTrait {
     ) -> ServiceResult<StatusMessageResponse>;
     async fn authorize_role(&self, request: Role) -> ServiceResult<StatusMessageResponse>;
     async fn revoke_role(&self, request: Role) -> ServiceResult<StatusMessageResponse>;
+    async fn list_roles(&self, request: GetListRequest) -> ServiceResult<ListResponse>;
 }
 
 pub type DynRoleServiceTrait = Arc<dyn RoleServiceTrait + Send + Sync>;
@@ -48,6 +52,7 @@ impl RoleServiceTrait for RoleService {
         let message = format!("role added: {:?}", role.name);
         Ok(StatusMessageResponse { message })
     }
+
     async fn delete_role(
         &self,
         request: RolesPermissionsRequest,
@@ -68,6 +73,7 @@ impl RoleServiceTrait for RoleService {
 
         Ok(StatusMessageResponse { message })
     }
+
     async fn authorize_role(&self, request: Role) -> ServiceResult<StatusMessageResponse> {
         info!(
             "linking role {:?} with permissions {:?}",
@@ -83,6 +89,7 @@ impl RoleServiceTrait for RoleService {
         let message = format!("permissions linked to role: {:?}", role.name);
         Ok(StatusMessageResponse { message })
     }
+
     async fn revoke_role(&self, request: Role) -> ServiceResult<StatusMessageResponse> {
         info!(
             "unlinking role {:?} from permissions {:?}",
@@ -97,5 +104,23 @@ impl RoleServiceTrait for RoleService {
         info!("permissions unlinked from role");
         let message = format!("permissions unlinked from role: {:?}", role.name);
         Ok(StatusMessageResponse { message })
+    }
+
+    async fn list_roles(&self, request: GetListRequest) -> ServiceResult<ListResponse> {
+        let offset = request.offset;
+        let limit = request.limit;
+        info!("getting roles with offset {} and limit {}", offset, limit);
+        let roles = self.repository.get_roles(offset, limit).await?;
+        let count = self.repository.get_roles_count().await?;
+        return Ok(ListResponse {
+            list: roles
+                .into_iter()
+                .map(|role| RolePermission {
+                    id: role.id,
+                    name: role.name,
+                })
+                .collect(),
+            count,
+        });
     }
 }

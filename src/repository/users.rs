@@ -1,11 +1,9 @@
 use anyhow::Context;
 use async_trait::async_trait;
-use madtofan_microservice_common::{
-    repository::connection_pool::ServiceConnectionPool, user::UserResponse,
-};
+use madtofan_microservice_common::repository::connection_pool::ServiceConnectionPool;
 use mockall::automock;
 use sqlx::types::time::OffsetDateTime;
-use sqlx::{query_as, FromRow};
+use sqlx::{query, query_as, FromRow};
 use std::sync::Arc;
 use std::time::SystemTime;
 
@@ -24,21 +22,6 @@ pub struct UserEntity {
     pub verified_at: Option<OffsetDateTime>,
 }
 
-impl UserEntity {
-    pub fn into_user_response(self) -> UserResponse {
-        UserResponse {
-            id: self.id,
-            email: self.email,
-            first_name: self.first_name,
-            last_name: self.last_name,
-            bio: Some(self.bio),
-            image: Some(self.image),
-            token: self.token,
-            roles: vec![],
-        }
-    }
-}
-
 impl Default for UserEntity {
     fn default() -> Self {
         UserEntity {
@@ -55,6 +38,12 @@ impl Default for UserEntity {
             verified_at: None,
         }
     }
+}
+
+#[derive(FromRow, Debug, Clone)]
+pub struct RoleEntity {
+    pub name: String,
+    pub permissions: Vec<String>,
 }
 
 #[automock]
@@ -80,6 +69,9 @@ pub trait UserRepositoryTrait {
     ) -> anyhow::Result<UserEntity>;
     async fn update_refresh_token(&self, id: i64, token: &str) -> anyhow::Result<UserEntity>;
     async fn verify_registration(&self, id: i64) -> anyhow::Result<UserEntity>;
+    async fn get_user_roles(&self, id: i64) -> anyhow::Result<Vec<RoleEntity>>;
+    async fn link_roles(&self, id: i64, roles: Vec<String>) -> anyhow::Result<()>;
+    async fn unlink_roles(&self, id: i64, roles: Vec<String>) -> anyhow::Result<()>;
 }
 
 pub type DynUserRepositoryTrait = Arc<dyn UserRepositoryTrait + Send + Sync>;
@@ -312,5 +304,110 @@ impl UserRepositoryTrait for UserRepository {
         .fetch_one(&self.pool)
         .await
         .context("could not verify the user")
+    }
+
+    async fn get_user_roles(&self, id: i64) -> anyhow::Result<Vec<RoleEntity>> {
+        query_as!(
+            RoleEntity,
+            r#"
+                select
+                    r.name as name,
+                    array_agg((
+                        p.name
+                    )) as "permissions!: Vec<String>"
+                    from user_roles as ur
+                    left join roles as r
+                        on ur.role_id = r.id
+                        and ur.user_id = $1::bigint
+                    left join roles_permissions as rp
+                        on r.id = rp.role_id
+                    left join permissions as p
+                        on rp.permission_id = p.id
+                    group by r.name
+            "#,
+            id
+        )
+        .fetch_all(&self.pool)
+        .await
+        .context("an unexpected error occured while obtaining the roles")
+    }
+
+    async fn link_roles(&self, id: i64, roles: Vec<String>) -> anyhow::Result<()> {
+        let user_ids = vec![id; roles.len()];
+
+        let role_ids = query!(
+            r#"
+                select
+                    id
+                from roles
+                where name = any($1::text[])
+            "#,
+            &roles,
+        )
+        .fetch_all(&self.pool)
+        .await
+        .context("an unexpected error occured while obtaining the roles to link")?
+        .into_iter()
+        .map(|r| r.id)
+        .collect::<Vec<i64>>();
+
+        query!(
+            r#"
+                insert into user_roles (
+                        user_id,
+                        role_id
+                    )
+                select * from unnest (
+                        $1::bigint[],
+                        $2::bigint[]
+                    )
+                returning *
+            "#,
+            &user_ids,
+            &role_ids,
+        )
+        .fetch_all(&self.pool)
+        .await
+        .context("an unexpected error occured while linking the roles")?;
+
+        Ok(())
+    }
+
+    async fn unlink_roles(&self, id: i64, roles: Vec<String>) -> anyhow::Result<()> {
+        let user_ids = vec![id; roles.len()];
+
+        let role_ids = query!(
+            r#"
+                select
+                    id
+                from roles
+                where name = any($1::text[])
+            "#,
+            &roles,
+        )
+        .fetch_all(&self.pool)
+        .await
+        .context("an unexpected error occured while obtaining the roles to link")?
+        .into_iter()
+        .map(|r| r.id)
+        .collect::<Vec<i64>>();
+
+        query!(
+            r#"
+                delete from user_roles 
+                where (user_id, role_id) in (select * from unnest (
+                        $1::bigint[],
+                        $2::bigint[]
+                    ))
+                returning *
+            "#,
+            &user_ids,
+            &role_ids,
+        )
+        .fetch_all(&self.pool)
+        .await
+        .context("an unexpected error occured while unlinking the roles")?;
+
+        Ok(())
     }
 }

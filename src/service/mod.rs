@@ -8,8 +8,8 @@ pub mod test {
 
     use clap::Parser;
     use madtofan_microservice_common::user::{
-        update_request::UpdateFields, GetListRequest, GetUserRequest, LoginRequest,
-        RefreshTokenRequest, RegisterRequest, Role, RolesPermissionsRequest,
+        update_request::UpdateFields, AuthorizeRevokeUser, GetListRequest, GetUserRequest,
+        LoginRequest, RefreshTokenRequest, RegisterRequest, Role, RolesPermissionsRequest,
         VerifyRegistrationRequest, VerifyTokenRequest,
     };
     use sqlx::PgPool;
@@ -569,6 +569,130 @@ pub mod test {
 
         assert_eq!(permissions.count, 2);
         assert_eq!(permissions.list.first().unwrap().name, permission_name_2);
+        Ok(())
+    }
+
+    #[sqlx::test]
+    async fn authorize_user_test(pool: PgPool) -> anyhow::Result<()> {
+        let all_traits = initialize_handler(pool);
+
+        let user_email = "email@email.com";
+        let created_user = all_traits
+            .user_repository
+            .create_user(user_email, "hashed_password", "First Name", "Last Name")
+            .await
+            .unwrap();
+        all_traits
+            .user_repository
+            .verify_registration(created_user.id)
+            .await?;
+
+        let role_name = "role_name";
+        all_traits.role_repository.create_role(role_name).await?;
+        let permission_name = "permission_name";
+        all_traits
+            .permission_repository
+            .create_permission(permission_name)
+            .await?;
+        all_traits
+            .role_repository
+            .link_permissions(role_name, vec![permission_name.to_string()])
+            .await?;
+
+        let request = AuthorizeRevokeUser {
+            id: created_user.id,
+            roles: vec![role_name.to_string()],
+        };
+
+        all_traits.user_service.authorize_user(request).await?;
+        let user_entity = all_traits
+            .user_repository
+            .get_user_by_id(created_user.id)
+            .await?;
+
+        let user = all_traits
+            .user_service
+            .get_user_response(user_entity)
+            .await?;
+
+        assert_eq!(user.roles.len(), 1);
+        assert_eq!(user.roles.first().unwrap().name, role_name);
+        assert_eq!(user.roles.first().unwrap().permissions.len(), 1);
+        assert_eq!(
+            user.roles.first().unwrap().permissions.first().unwrap(),
+            permission_name
+        );
+
+        Ok(())
+    }
+
+    #[sqlx::test]
+    async fn revoke_user_test(pool: PgPool) -> anyhow::Result<()> {
+        let all_traits = initialize_handler(pool);
+
+        let user_email = "email@email.com";
+        let created_user = all_traits
+            .user_repository
+            .create_user(user_email, "hashed_password", "First Name", "Last Name")
+            .await
+            .unwrap();
+        all_traits
+            .user_repository
+            .verify_registration(created_user.id)
+            .await?;
+
+        let role_one_name = "role_one_name";
+        all_traits
+            .role_repository
+            .create_role(role_one_name)
+            .await?;
+        let permission_one_name = "permission_one_name";
+        all_traits
+            .permission_repository
+            .create_permission(permission_one_name)
+            .await?;
+        let role_two_name = "role_two_name";
+        all_traits
+            .role_repository
+            .create_role(role_two_name)
+            .await?;
+        let permission_two_name = "permission_two_name";
+        all_traits
+            .permission_repository
+            .create_permission(permission_two_name)
+            .await?;
+        all_traits
+            .role_repository
+            .link_permissions(role_one_name, vec![permission_one_name.to_string()])
+            .await?;
+        all_traits
+            .role_repository
+            .link_permissions(role_two_name, vec![permission_two_name.to_string()])
+            .await?;
+
+        all_traits
+            .user_repository
+            .link_roles(
+                created_user.id,
+                vec![role_one_name.to_string(), role_two_name.to_string()],
+            )
+            .await?;
+
+        let request = AuthorizeRevokeUser {
+            id: created_user.id,
+            roles: vec![role_one_name.to_string()],
+        };
+
+        let user = all_traits.user_service.revoke_user(request).await?;
+
+        assert_eq!(user.roles.len(), 1);
+        assert_eq!(user.roles.first().unwrap().name, role_two_name);
+        assert_eq!(user.roles.first().unwrap().permissions.len(), 1);
+        assert_eq!(
+            user.roles.first().unwrap().permissions.first().unwrap(),
+            permission_two_name
+        );
+
         Ok(())
     }
 }

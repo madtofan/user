@@ -396,4 +396,110 @@ pub mod test {
 
         Ok(())
     }
+
+    #[sqlx::test]
+    async fn link_user_roles_test(pool: PgPool) -> anyhow::Result<()> {
+        let user_repository = Arc::new(UserRepository::new(pool.clone())) as DynUserRepositoryTrait;
+
+        let user_email = "email@email.com";
+        let created_user = user_repository
+            .create_user(user_email, "hashed_password", "First Name", "Last Name")
+            .await
+            .unwrap();
+        user_repository.verify_registration(created_user.id).await?;
+
+        let roles = user_repository.get_user_roles(created_user.id).await?;
+        assert_eq!(roles.len(), 0);
+
+        let role_repository = Arc::new(RoleRepository::new(pool.clone())) as DynRoleRepositoryTrait;
+        let permission_repository =
+            Arc::new(PermissionRepository::new(pool)) as DynPermissionRepositoryTrait;
+
+        let role_name = "role_name";
+        role_repository.create_role(role_name).await?;
+        let permission_name = "permission_name";
+        permission_repository
+            .create_permission(permission_name)
+            .await?;
+        role_repository
+            .link_permissions(role_name, vec![permission_name.to_string()])
+            .await?;
+
+        user_repository
+            .link_roles(created_user.id, vec![role_name.to_string()])
+            .await?;
+
+        let roles = user_repository.get_user_roles(created_user.id).await?;
+        assert_eq!(roles.len(), 1);
+        assert_eq!(roles.first().unwrap().name, role_name);
+        assert_eq!(roles.first().unwrap().permissions.len(), 1);
+        assert_eq!(
+            roles.first().unwrap().permissions.first().unwrap(),
+            permission_name
+        );
+
+        Ok(())
+    }
+
+    #[sqlx::test]
+    async fn unlink_user_roles_test(pool: PgPool) -> anyhow::Result<()> {
+        let user_repository = Arc::new(UserRepository::new(pool.clone())) as DynUserRepositoryTrait;
+
+        let user_email = "email@email.com";
+        let created_user = user_repository
+            .create_user(user_email, "hashed_password", "First Name", "Last Name")
+            .await
+            .unwrap();
+        user_repository.verify_registration(created_user.id).await?;
+
+        let role_repository = Arc::new(RoleRepository::new(pool.clone())) as DynRoleRepositoryTrait;
+        let permission_repository =
+            Arc::new(PermissionRepository::new(pool)) as DynPermissionRepositoryTrait;
+
+        let role_one_name = "role_one_name";
+        role_repository.create_role(role_one_name).await?;
+        let permission_one_name = "permission_one_name";
+        permission_repository
+            .create_permission(permission_one_name)
+            .await?;
+        let role_two_name = "role_two_name";
+        role_repository.create_role(role_two_name).await?;
+        let permission_two_name = "permission_two_name";
+        permission_repository
+            .create_permission(permission_two_name)
+            .await?;
+        role_repository
+            .link_permissions(role_one_name, vec![permission_one_name.to_string()])
+            .await?;
+        role_repository
+            .link_permissions(role_two_name, vec![permission_two_name.to_string()])
+            .await?;
+
+        user_repository
+            .link_roles(
+                created_user.id,
+                vec![role_one_name.to_string(), role_two_name.to_string()],
+            )
+            .await?;
+
+        let roles = user_repository.get_user_roles(created_user.id).await?;
+
+        assert_eq!(roles.len(), 2);
+
+        user_repository
+            .unlink_roles(created_user.id, vec![role_one_name.to_string()])
+            .await?;
+
+        let roles = user_repository.get_user_roles(created_user.id).await?;
+
+        assert_eq!(roles.len(), 1);
+        assert_eq!(roles.first().unwrap().name, role_two_name);
+        assert_eq!(roles.first().unwrap().permissions.len(), 1);
+        assert_eq!(
+            roles.first().unwrap().permissions.first().unwrap(),
+            permission_two_name
+        );
+
+        Ok(())
+    }
 }

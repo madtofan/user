@@ -1,7 +1,8 @@
 use crate::config::AppConfig;
-use crate::repository::users::DynUserRepositoryTrait;
+use crate::repository::users::{DynUserRepositoryTrait, UserEntity};
 use argon2::Config;
 use async_trait::async_trait;
+use madtofan_microservice_common::user::{AuthorizeRevokeUser, Role};
 use madtofan_microservice_common::{
     errors::{ServiceError, ServiceResult},
     user::{
@@ -28,6 +29,9 @@ pub trait UserServiceTrait {
     ) -> ServiceResult<UserResponse>;
     async fn verify_token(&self, request: VerifyTokenRequest)
         -> ServiceResult<VerifyTokenResponse>;
+    async fn authorize_user(&self, request: AuthorizeRevokeUser) -> ServiceResult<UserResponse>;
+    async fn revoke_user(&self, request: AuthorizeRevokeUser) -> ServiceResult<UserResponse>;
+    async fn get_user_response(&self, user: UserEntity) -> ServiceResult<UserResponse>;
 }
 
 pub type DynUserServiceTrait = Arc<dyn UserServiceTrait + Send + Sync>;
@@ -93,7 +97,7 @@ impl UserServiceTrait for UserService {
 
         info!("user successfully created");
 
-        Ok(created_user.into_user_response())
+        self.get_user_response(created_user).await
     }
 
     async fn verify_registration(
@@ -103,7 +107,7 @@ impl UserServiceTrait for UserService {
         let verified_user = self.repository.verify_registration(request.id).await?;
 
         info!("verified user registration for user id: {:?}", &request.id);
-        Ok(verified_user.into_user_response())
+        self.get_user_response(verified_user).await
     }
 
     async fn login_user(&self, request: LoginRequest) -> ServiceResult<UserResponse> {
@@ -129,7 +133,7 @@ impl UserServiceTrait for UserService {
             return Err(ServiceError::InvalidLoginAttempt);
         }
 
-        Ok(user.into_user_response())
+        self.get_user_response(user).await
     }
 
     async fn get_user(&self, request: GetUserRequest) -> ServiceResult<UserResponse> {
@@ -138,7 +142,7 @@ impl UserServiceTrait for UserService {
 
         info!("user found with email {:?}", user.email);
 
-        Ok(user.into_user_response())
+        self.get_user_response(user).await
     }
 
     async fn update_user(&self, user_id: i64, fields: UpdateFields) -> ServiceResult<UserResponse> {
@@ -166,7 +170,7 @@ impl UserServiceTrait for UserService {
 
         info!("user {:?} updated", &user_id);
 
-        Ok(updated_user.into_user_response())
+        self.get_user_response(updated_user).await
     }
 
     async fn refresh_token(&self, request: RefreshTokenRequest) -> ServiceResult<UserResponse> {
@@ -178,7 +182,7 @@ impl UserServiceTrait for UserService {
 
         info!("updated user {:?} token", user.email);
 
-        Ok(user.into_user_response())
+        self.get_user_response(user).await
     }
 
     async fn verify_token(
@@ -189,5 +193,58 @@ impl UserServiceTrait for UserService {
         let valid = user.token.eq(&Some(request.token));
 
         Ok(VerifyTokenResponse { valid })
+    }
+
+    async fn authorize_user(&self, request: AuthorizeRevokeUser) -> ServiceResult<UserResponse> {
+        info!(
+            "authorizing user {:?} with role {:?}",
+            request.id,
+            request.roles.join(",")
+        );
+        self.repository
+            .link_roles(request.id, request.roles)
+            .await?;
+
+        let user = self.repository.get_user_by_id(request.id).await?;
+        info!("authorized user {:?}", user.email);
+
+        self.get_user_response(user).await
+    }
+
+    async fn revoke_user(&self, request: AuthorizeRevokeUser) -> ServiceResult<UserResponse> {
+        info!(
+            "revoking user {:?} from role {:?}",
+            request.id,
+            request.roles.join(",")
+        );
+        self.repository
+            .unlink_roles(request.id, request.roles)
+            .await?;
+
+        let user = self.repository.get_user_by_id(request.id).await?;
+        info!("revoked user {:?}", user.email);
+
+        self.get_user_response(user).await
+    }
+
+    async fn get_user_response(&self, user: UserEntity) -> ServiceResult<UserResponse> {
+        let user_roles = self.repository.get_user_roles(user.id).await?;
+
+        Ok(UserResponse {
+            id: user.id,
+            email: user.email,
+            first_name: user.first_name,
+            last_name: user.last_name,
+            bio: Some(user.bio),
+            image: Some(user.image),
+            token: user.token,
+            roles: user_roles
+                .into_iter()
+                .map(|r| Role {
+                    name: r.name,
+                    permissions: r.permissions,
+                })
+                .collect(),
+        })
     }
 }

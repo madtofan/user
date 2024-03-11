@@ -93,7 +93,7 @@ impl User for RequestHandler {
                 Ok(Response::new(updated_user))
             }
             None => Err(Status::new(
-                tonic::Code::NotFound,
+                tonic::Code::Aborted,
                 "Unable to obtain the field to update the user",
             )),
         }

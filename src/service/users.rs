@@ -118,9 +118,7 @@ impl UserServiceTrait for UserService {
         let existing_user = self.repository.get_user_by_email(&email).await?;
 
         if existing_user.is_none() {
-            return Err(ServiceError::NotFound(String::from(
-                "user email does not exist",
-            )));
+            return Err(ServiceError::InvalidLoginAttempt);
         }
 
         let user = existing_user.unwrap();

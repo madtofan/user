@@ -1,0 +1,29 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n                insert into user_roles (\n                        user_id,\n                        role_id\n                    )\n                select * from unnest (\n                        $1::bigint[],\n                        $2::bigint[]\n                    )\n                returning *\n            ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "user_id",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 1,
+        "name": "role_id",
+        "type_info": "Int4"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int8Array",
+        "Int8Array"
+      ]
+    },
+    "nullable": [
+      false,
+      false
+    ]
+  },
+  "hash": "99bcebb1d15cf904c9c7b20560c06ac74b20a8dac3f57831d1ac20dd361fb328"
+}

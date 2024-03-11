@@ -1,0 +1,28 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n                select\n                    r.name as name,\n                    array_agg((\n                        p.name\n                    )) as \"permissions!: Vec<String>\"\n                    from user_roles as ur\n                    left join roles as r\n                        on ur.role_id = r.id\n                        and ur.user_id = $1::bigint\n                    left join roles_permissions as rp\n                        on r.id = rp.role_id\n                    left join permissions as p\n                        on rp.permission_id = p.id\n                    group by r.name\n            ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "name",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 1,
+        "name": "permissions!: Vec<String>",
+        "type_info": "VarcharArray"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int8"
+      ]
+    },
+    "nullable": [
+      false,
+      null
+    ]
+  },
+  "hash": "5dac9a3d08e32ebdba1a8a449cc0badcdf28d9a13f3b707a32a5c497c68bcaf1"
+}

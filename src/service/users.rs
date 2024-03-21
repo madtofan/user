@@ -2,13 +2,13 @@ use crate::config::AppConfig;
 use crate::repository::users::{DynUserRepositoryTrait, UserEntity};
 use argon2::Config;
 use async_trait::async_trait;
-use madtofan_microservice_common::user::{AuthorizeRevokeUser, Role};
+use madtofan_microservice_common::user::{AuthorizeRevokeUser, GetListRequest, Role};
 use madtofan_microservice_common::{
     errors::{ServiceError, ServiceResult},
     user::{
         update_request::UpdateFields, GetUserRequest, LoginRequest, RefreshTokenRequest,
-        RegisterRequest, UserResponse, VerifyRegistrationRequest, VerifyTokenRequest,
-        VerifyTokenResponse,
+        RegisterRequest, UserListResponse, UserResponse, VerifyRegistrationRequest,
+        VerifyTokenRequest, VerifyTokenResponse,
     },
 };
 use mockall::automock;
@@ -32,6 +32,7 @@ pub trait UserServiceTrait {
     async fn authorize_user(&self, request: AuthorizeRevokeUser) -> ServiceResult<UserResponse>;
     async fn revoke_user(&self, request: AuthorizeRevokeUser) -> ServiceResult<UserResponse>;
     async fn get_user_response(&self, user: UserEntity) -> ServiceResult<UserResponse>;
+    async fn get_user_list(&self, request: GetListRequest) -> ServiceResult<UserListResponse>;
 }
 
 pub type DynUserServiceTrait = Arc<dyn UserServiceTrait + Send + Sync>;
@@ -244,5 +245,17 @@ impl UserServiceTrait for UserService {
                 })
                 .collect(),
         })
+    }
+
+    async fn get_user_list(&self, request: GetListRequest) -> ServiceResult<UserListResponse> {
+        let offset = request.offset;
+        let limit = request.limit;
+        info!("getting users with offset {} and limit {}", offset, limit);
+        let users = self.repository.get_user_list(offset, limit).await?;
+        let count = self.repository.get_users_count().await?;
+        return Ok(UserListResponse {
+            users: users.into_iter().map(|u| u.into()).collect(),
+            count,
+        });
     }
 }

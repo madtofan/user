@@ -118,6 +118,7 @@ impl PermissionRepositoryTrait for PermissionRepository {
         .await
         .context("an unexpected error occured while obtaining the permissions")
     }
+
     async fn get_permissions_count(&self) -> anyhow::Result<i64> {
         let count_result = query!(
             r#"

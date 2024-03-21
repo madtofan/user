@@ -1,6 +1,7 @@
 use anyhow::Context;
 use async_trait::async_trait;
 use madtofan_microservice_common::repository::connection_pool::ServiceConnectionPool;
+use madtofan_microservice_common::user::UserList;
 use mockall::automock;
 use sqlx::types::time::OffsetDateTime;
 use sqlx::{query, query_as, FromRow};
@@ -40,6 +41,20 @@ impl Default for UserEntity {
     }
 }
 
+impl From<UserEntity> for UserList {
+    fn from(user: UserEntity) -> Self {
+        UserList {
+            id: user.id,
+            email: user.email,
+            first_name: user.first_name,
+            last_name: user.last_name,
+            bio: Some(user.bio),
+            image: Some(user.image),
+            verified: user.verified_at.is_some(),
+        }
+    }
+}
+
 #[derive(FromRow, Debug, Clone)]
 pub struct RoleEntity {
     pub name: String,
@@ -72,6 +87,8 @@ pub trait UserRepositoryTrait {
     async fn get_user_roles(&self, id: i64) -> anyhow::Result<Vec<RoleEntity>>;
     async fn link_roles(&self, id: i64, roles: Vec<String>) -> anyhow::Result<()>;
     async fn unlink_roles(&self, id: i64, roles: Vec<String>) -> anyhow::Result<()>;
+    async fn get_user_list(&self, offset: i64, limit: i64) -> anyhow::Result<Vec<UserEntity>>;
+    async fn get_users_count(&self) -> anyhow::Result<i64>;
 }
 
 pub type DynUserRepositoryTrait = Arc<dyn UserRepositoryTrait + Send + Sync>;
@@ -409,5 +426,48 @@ impl UserRepositoryTrait for UserRepository {
         .context("an unexpected error occured while unlinking the roles")?;
 
         Ok(())
+    }
+
+    async fn get_user_list(&self, offset: i64, limit: i64) -> anyhow::Result<Vec<UserEntity>> {
+        query_as!(
+            UserEntity,
+            r#"
+                select
+                    id,
+                    created_at,
+                    updated_at,
+                    email,
+                    password,
+                    first_name,
+                    last_name,
+                    bio,
+                    image,
+                    token,
+                    verified_at
+                from users
+                order by created_at desc
+                limit $1::int
+                offset $2::int
+            "#,
+            limit as i32,
+            offset as i32,
+        )
+        .fetch_all(&self.pool)
+        .await
+        .context("an unexpected error occured while obtaining the users")
+    }
+
+    async fn get_users_count(&self) -> anyhow::Result<i64> {
+        let count_result = query!(
+            r#"
+                select
+                    count(*)
+                from users
+            "#,
+        )
+        .fetch_one(&self.pool)
+        .await?;
+
+        Ok(count_result.count.unwrap())
     }
 }
